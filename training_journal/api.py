@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from .config import Settings
 from .models import ISODate, Plan, ProgressPoint, ProgressSeries, SyncResult, WorkoutDocument, WorkoutWrite
@@ -93,4 +95,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 groups[key].points.append(ProgressPoint(date=workout.date, value=max(values)))
         return list(groups.values())
 
+    # Hash-based frontend routes keep API and PWA on a single origin.
+    frontend = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+    if frontend.is_dir():
+        app.mount("/", StaticFiles(directory=frontend, html=True), name="frontend")
     return app

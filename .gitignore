@@ -8,6 +8,10 @@ build/
 dist/
 .runtime/
 .env
+node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
 .DS_Store
 # Workout JSON files deliberately belong in Git.
 data/.*.tmp
