@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "default_sets": 3,
+  "exercises": [
+    {"exercise_id": "bench_press", "name": "Wyciskanie leżąc", "unit": "kg"},
+    {"exercise_id": "squat", "name": "Przysiady", "unit": "kg"},
+    {"exercise_id": "pull_up", "name": "Podciągnięcia", "unit": "kg"},
+    {"exercise_id": "lunge", "name": "Wykroki", "unit": "kg"},
+    {"exercise_id": "push_up", "name": "Pompki", "unit": "kg"},
+    {"exercise_id": "plank", "name": "Plank", "unit": "sec"}
+  ]
+}
