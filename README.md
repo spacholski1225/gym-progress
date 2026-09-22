@@ -1,8 +1,92 @@
-# Dziennik treningowy — backend
+# Dziennik treningowy — PWA i backend
 
 Prywatne API FastAPI do zapisu treningów. Dane są plikami JSON, jeden trening na dzień.
 Każda zmiana zapisana przez API tworzy lokalny commit Git obejmujący tylko dany trening.
 Bez kont, logowania, bazy SQL i automatycznego push. Dostęp docelowo wyłącznie przez VPN.
+
+Frontend React/TypeScript jest w `frontend/`. Lista ćwiczeń prowadzi do osobnego ekranu
+edycji serii. Nowy trening kopiuje wyniki ostatniego wcześniejszego treningu zapisanego
+na serwerze i dostępnego w pamięci telefonu. Pierwszy trening ma puste pola i trzy serie.
+Zmiana kolejności/nazwy ćwiczeń wynika z aktualnego planu; kopiowanie jest po stałym ID
+i jednostce, więc kilogramy nigdy nie są kopiowane jako sekundy.
+
+## Uruchomienie całej aplikacji
+
+Do zbudowania frontendu potrzebujesz Node.js **22+** i pnpm **11.19.0**.
+Na Macu Node można zainstalować przez `brew install node`, a następnie
+`npm install -g pnpm@11.19.0`. Używaj wersji zależności zapisanych w `pnpm-lock.yaml`.
+
+```sh
+cd frontend
+pnpm install --frozen-lockfile
+pnpm build
+cd ..
+.venv/bin/python -m uvicorn training_journal.main:app --host 127.0.0.1 --port 8000 --workers 1
+```
+
+Otwórz **<http://127.0.0.1:8000/>**. Nie otwieraj `frontend/index.html` jako lokalnego
+pliku: jest to źródło wymagające zbudowania przez Vite. Po buildzie FastAPI serwuje
+`frontend/dist/` pod `/`, a API nadal pod `/api/`. Jeśli backend działał przed buildem,
+zrestartuj go, aby zamontował frontend. Nie jest potrzebny osobny serwer Node na RPi.
+Możesz zbudować frontend na Macu i skopiować `frontend/dist/` na RPi obok kodu backendu.
+Artefakty buildu są poza Gitem; kod, lockfile i pliki treningów pozostają w repozytorium.
+
+Praca nad interfejsem: uruchom backend na porcie 8000, a w drugim terminalu
+`cd frontend` i `pnpm dev`. Vite na porcie 5173 przekazuje `/api` do backendu.
+Pełne działanie offline testuj na produkcyjnym buildzie; tryb deweloperski nie rejestruje
+service workera.
+
+### Korzystanie na iPhonie
+
+Docelowy adres z RPi musi mieć **HTTPS z certyfikatem zaufanym przez iPhone**, także za VPN.
+Wyjątek dla `localhost` pozwala testować offline lokalnie na komputerze; zwykłe HTTP pod
+adresem IP RPi nie wystarcza do instalowalnej aplikacji działającej offline.
+W Safari otwórz adres aplikacji, wybierz udostępnianie, a następnie „Do ekranu początkowego”.
+Konfiguracja certyfikatu i reverse proxy wymaga docelowego adresu serwera — nie jest tu wdrożona.
+
+- **Trening:** lista w ustalonej kolejności; dotknięcie ćwiczenia otwiera jego serie.
+  „Gotowe” wraca do listy. Liczby z przecinkiem i kropką są obsługiwane, klawiatura jest numeryczna.
+  Można dodawać/usuwać serie. Usunięcie wypełnionej serii wymaga potwierdzenia.
+  Zmiana jednostki czyści wartości ciężaru/czasu po potwierdzeniu, bez ich przeliczania.
+- **Zapis lokalny:** każda zmiana trafia do IndexedDB, również niepełny tekst w polu.
+  Zakończony zapis potwierdza komunikat na dole. Błąd pamięci pokazuje ostrzeżenie i umożliwia
+  pobranie kopii. Nowa wersja aplikacji nie przeładowuje formularza automatycznie.
+- **Synchronizacja:** tylko przyciskiem, także dla niepełnego treningu. Powrót połączenia
+  może odświeżyć odczyty, ale nigdy automatycznie nie wysyła formularza.
+  Zmiany zrobione podczas synchronizacji pozostają lokalne i wymagają kolejnego kliknięcia.
+  Przy konflikcie można pobrać lokalną kopię, wybrać własną wersję lub wersję serwera.
+- **Historia:** treningi zapisane na serwerze i lokalne szkice. Wybranie daty pozwala
+  edytować ten dzień bez tworzenia nowego treningu. Dostępny jest eksport lokalnej kopii JSON.
+- **Postępy:** sześć wykresów, 30/90 dni, maksymalny ciężar lub czas danej sesji.
+  Wykresy obejmują wyłącznie zapisane wersje serwerowe, również odczytane z pamięci offline.
+  Punkt można dotknąć; pod wykresem jest dostępna również lista wartości.
+
+Lokalne dane należą do konkretnego adresu aplikacji i urządzenia. Adresy na portach 8000,
+8001 i 5173 mają oddzielne magazyny. Zmiana adresu nie usuwa JSON-ów na serwerze, ale lokalne
+szkice nie przeniosą się automatycznie. Nie czyść danych Safari przed synchronizacją.
+Eksport JSON jest kopią do pobrania; automatyczny import kopii nie jest częścią tej wersji.
+
+### Testy frontendu
+
+```sh
+cd frontend
+pnpm test
+pnpm build
+pnpm exec playwright install chromium
+pnpm test:e2e
+```
+
+Testy jednostkowe sprawdzają liczby, kopiowanie wyników, zakresy dat, zapis offline,
+wyścig edycji z synchronizacją, konflikt rewizji oraz awarię Git i pamięci telefonu.
+Test E2E uruchamia prawdziwe FastAPI i Git w tymczasowym repozytorium, używa osobnego
+profilu przeglądarki i usuwa testowe dane po zakończeniu. Nie zapisuje treningów w `data/`
+tego projektu. Na Macu korzysta z zainstalowanego Chrome; poza nim z Chromium Playwrighta.
+Możesz wskazać `CHROME_PATH` oraz `PYTHON` jako ścieżki do własnych programów.
+Zrzuty kontrolne trafiają do ignorowanego `frontend/test-results/`.
+
+Sprawdzone automatycznie w Chromium przy szerokościach 320/390/768 px, z prawdziwym
+service workerem i przeładowaniem bez sieci. Ostateczny test instalacji, klawiatury i układu
+na fizycznym iPhonie wymaga otwarcia docelowego adresu HTTPS.
 
 ## Uruchomienie
 
@@ -237,7 +321,7 @@ journalctl -u training-journal -f
 Usługa nasłuchuje na `127.0.0.1:8000`, pod przyszłe reverse proxy z HTTPS dostępne przez VPN.
 Jeśli chcesz testować backend bezpośrednio po VPN, zamiast loopback podaj konkretny adres
 interfejsu VPN w `--host`. API nie ma mechanizmu logowania — ograniczenie dostępu zapewnia sieć.
-Konfiguracja HTTPS, frontend i instalacja PWA na iPhonie należą do następnego etapu.
+Konfiguracja docelowego HTTPS i instalacja PWA na iPhonie pozostają etapem wdrożenia.
 
 Repozytorium nie ma skonfigurowanego zdalnego serwera. Lokalne commity dają historię,
 ale kopię repozytorium wraz z `data/` trzeba przechowywać również poza kartą RPi.
