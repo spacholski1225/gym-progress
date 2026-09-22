@@ -1,0 +1,19 @@
+[Unit]
+Description=Private training journal API
+After=network.target
+
+[Service]
+Type=simple
+# Replace this user and paths with the actual deployment values.
+User=YOUR_USER
+WorkingDirectory=/srv/training-journal
+Environment=REPO_DIR=/srv/training-journal
+Environment=DATA_DIR=data
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/training-journal/.venv/bin/python -m uvicorn training_journal.main:app --host 127.0.0.1 --port 8000 --workers 1
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
