@@ -4,6 +4,7 @@ import logging
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from .config import Settings
@@ -21,6 +22,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         description="Private VPN-only API. Dates identify workouts; synchronization is explicit. No authentication.",
     )
     app.state.store = store
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request(_: Request, exc: RequestValidationError):
+        # Do not echo nonfinite input numbers, which cannot be encoded in JSON.
+        errors = [{key: error[key] for key in ("type", "loc", "msg")} for error in exc.errors()]
+        return JSONResponse(status_code=422, content={"detail": errors})
 
     @app.exception_handler(StorageError)
     async def invalid_storage(_: Request, exc: StorageError):
