@@ -1,4 +1,8 @@
-# Dziennik treningowy — PWA i backend
+# gym-progress — dziennik treningowy
+
+Monorepo: backend w `training_journal/`, frontend w `frontend/`, treningi w `data/`.
+Lokalna ścieżka projektu: `~/Sources/gym-progress`.
+Repozytorium: [spacholski1225/gym-progress](https://github.com/spacholski1225/gym-progress), gałąź `master`.
 
 Prywatne API FastAPI do zapisu treningów. Dane są plikami JSON, jeden trening na dzień.
 Każda zmiana zapisana przez API tworzy lokalny commit Git obejmujący tylko dany trening.
@@ -99,7 +103,7 @@ python3 -m venv .venv
 .venv/bin/python -m uvicorn training_journal.main:app --host 127.0.0.1 --port 8000 --workers 1
 ```
 
-Polecenia wykonuj w katalogu `training-journal`. W dostarczonym projekcie środowisko `.venv`
+Polecenia wykonuj w katalogu `gym-progress`. W dostarczonym projekcie środowisko `.venv`
 jest już przygotowane na obecnym komputerze; na RPi utwórz nowe, nie kopiuj `.venv` z macOS.
 
 - Swagger UI: <http://127.0.0.1:8000/docs>
@@ -273,8 +277,8 @@ deploy/                  # Przykładowa usługa systemd
 ```
 
 `data/` oznacza podkatalog projektu, a nie systemowy `/data`. Repozytorium zostało już
-zainicjalizowane na gałęzi `main`. Jeśli przenosisz projekt, klonuj repozytorium lub zachowaj
-`.git`. Skopiowanie samych plików wymaga `git init -b main` i początkowego commita.
+zainicjalizowane na gałęzi `master`. Jeśli przenosisz projekt, klonuj repozytorium lub zachowaj
+`.git`. Skopiowanie samych plików wymaga `git init -b master` i początkowego commita.
 Nie dołączamy przykładowych treningów do rzeczywistych danych.
 
 Automatyczne commity mają autora `Training Journal <training-journal@localhost>`,
@@ -323,5 +327,6 @@ Jeśli chcesz testować backend bezpośrednio po VPN, zamiast loopback podaj kon
 interfejsu VPN w `--host`. API nie ma mechanizmu logowania — ograniczenie dostępu zapewnia sieć.
 Konfiguracja docelowego HTTPS i instalacja PWA na iPhonie pozostają etapem wdrożenia.
 
-Repozytorium nie ma skonfigurowanego zdalnego serwera. Lokalne commity dają historię,
-ale kopię repozytorium wraz z `data/` trzeba przechowywać również poza kartą RPi.
+Remote `origin` wskazuje na `git@github.com:spacholski1225/gym-progress.git`.
+Backend nadal tworzy tylko lokalne commity; po synchronizacji treningów wysyłaj je osobno
+poleceniem `git push`. Kopię repozytorium wraz z `data/` przechowuj również poza kartą RPi.
