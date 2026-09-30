@@ -8,11 +8,13 @@ Prywatne API FastAPI do zapisu treningów. Dane są plikami JSON, jeden trening 
 Każda zmiana zapisana przez API tworzy lokalny commit Git obejmujący tylko dany trening.
 Bez kont, logowania, bazy SQL i automatycznego push. Dostęp docelowo wyłącznie przez VPN.
 
-Frontend React/TypeScript jest w `frontend/`. Lista ćwiczeń prowadzi do osobnego ekranu
-edycji serii. Nowy trening kopiuje wyniki ostatniego wcześniejszego treningu zapisanego
-na serwerze i dostępnego w pamięci telefonu. Pierwszy trening ma puste pola i trzy serie.
-Zmiana kolejności/nazwy ćwiczeń wynika z aktualnego planu; kopiowanie jest po stałym ID
-i jednostce, więc kilogramy nigdy nie są kopiowane jako sekundy.
+Frontend React/TypeScript jest w `frontend/`. Po wejściu wybiera się jeden z trzech planów
+treningowych: Plan A jest gotowy, a plany B i C są oznaczone jako będące w przygotowaniu.
+Obok wyboru planu widać ostatni zapisany trening i jego datę pobrane z serwera.
+Lista ćwiczeń prowadzi do osobnego ekranu edycji serii. Nowy trening kopiuje wyniki ostatniego
+wcześniejszego treningu zapisanego na serwerze i dostępnego w pamięci telefonu. Pierwszy
+trening ma puste pola i trzy serie. Zmiana kolejności/nazwy ćwiczeń wynika z aktualnego planu;
+kopiowanie jest po stałym ID i jednostce, więc kilogramy nigdy nie są kopiowane jako sekundy.
 
 ## Uruchomienie całej aplikacji
 

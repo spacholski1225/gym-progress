@@ -35,6 +35,8 @@ try {
   }
   assert.equal((await fetch(`${base}/`)).status, 200, 'Build the frontend before E2E tests');
   const plan = await (await fetch(`${base}/api/plan`)).json();
+  const firstExercise = plan.exercises[0];
+  const lastExercise = plan.exercises.at(-1);
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const before = new Date(`${today}T12:00:00Z`); before.setUTCDate(before.getUTCDate() - 1);
   const yesterday = before.toISOString().slice(0, 10);
@@ -53,20 +55,22 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   let writes = 0; page.on('request', request => { if (request.method() === 'PUT') writes++; });
   await page.goto(base);
-  await expect(page.locator('.exercise-card')).toHaveCount(6);
+  await expect(page.getByRole('heading', { name: 'Wybierz plan' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Plan B/ })).toBeDisabled();
+  await expect(page.locator('.exercise-card')).toHaveCount(plan.exercises.length);
   assert.deepEqual(await page.locator('.exercise-card strong').allTextContents(), plan.exercises.map(e => e.name));
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
-  await page.getByRole('button', { name: /Wyciskanie leżąc/ }).click();
-  const weight = page.getByRole('textbox', { name: 'Wyciskanie leżąc, seria 1, kg', exact: true });
+  await page.getByRole('button', { name: firstExercise.name, exact: false }).click();
+  const weight = page.getByRole('textbox', { name: `${firstExercise.name}, seria 1, ${firstExercise.unit}`, exact: true });
   await expect(weight).toHaveValue('22,5');
   await weight.fill('23,5');
-  await page.getByRole('textbox', { name: 'Wyciskanie leżąc, seria 2, powtórzenia', exact: true }).fill('');
+  await page.getByRole('textbox', { name: `${firstExercise.name}, seria 2, powtórzenia`, exact: true }).fill('');
   await expect(page.getByRole('status')).toHaveText('Zmiany zapisane na telefonie');
   assert.equal(writes, 0, 'Opening/editing must not save to server');
   await context.setOffline(true);
   await page.reload();
   await expect(weight).toHaveValue('23,5');
-  await expect(page.getByRole('textbox', { name: 'Wyciskanie leżąc, seria 2, powtórzenia', exact: true })).toHaveValue('');
+  await expect(page.getByRole('textbox', { name: `${firstExercise.name}, seria 2, powtórzenia`, exact: true })).toHaveValue('');
   await page.getByRole('button', { name: 'Gotowe · wróć do listy' }).click();
   await page.getByRole('button', { name: 'Synchronizuj trening', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Sprawdź VPN');
@@ -81,7 +85,7 @@ try {
   const external = { schema_version: 1, date: today, exercises: structuredClone(saved.exercises), expected_revision: saved.revision };
   external.exercises[0].sets[0].value = 28;
   assert.equal((await fetch(`${base}/api/workouts/${today}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(external) })).status, 200);
-  await page.getByRole('button', { name: /Wyciskanie leżąc/ }).click();
+  await page.getByRole('button', { name: firstExercise.name, exact: false }).click();
   await weight.fill('29');
   await page.getByRole('button', { name: 'Gotowe · wróć do listy' }).click();
   await page.getByRole('button', { name: 'Synchronizuj trening', exact: true }).click();
@@ -97,15 +101,15 @@ try {
   await expect(page.locator('.history-card')).toHaveCount(2);
   await page.locator('.history-card').last().click();
   await expect(page.getByLabel('Dzień treningu')).toHaveValue(yesterday);
-  await page.getByRole('button', { name: /Plank/ }).click();
-  await page.getByRole('textbox', { name: 'Plank, seria 1, sec', exact: true }).fill('60');
+  await page.getByRole('button', { name: lastExercise.name, exact: false }).click();
+  await page.getByRole('textbox', { name: `${lastExercise.name}, seria 1, ${lastExercise.unit}`, exact: true }).fill('60');
   await page.screenshot({ path: resolve(frontend, 'test-results/plank.png'), fullPage: true });
   await page.getByRole('button', { name: 'Gotowe · wróć do listy' }).click();
   await page.getByRole('button', { name: 'Synchronizuj trening', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Zsynchronizowano', exact: true })).toBeVisible();
-  assert.equal((await (await fetch(`${base}/api/workouts/${yesterday}`)).json()).exercises[5].sets[0].value, 60);
+  assert.equal((await (await fetch(`${base}/api/workouts/${yesterday}`)).json()).exercises.at(-1).sets[0].value, 60);
   await page.getByRole('link', { name: 'Postępy', exact: true }).click();
-  await expect(page.locator('.chart-card')).toHaveCount(6);
+  await expect(page.locator('.chart-card')).toHaveCount(plan.exercises.length);
   await page.getByRole('button', { name: 'Ostatnie 90 dni' }).click();
   await expect(page.getByRole('button', { name: 'Ostatnie 90 dni' })).toHaveAttribute('aria-pressed', 'true');
   for (const width of [320, 390, 768]) {

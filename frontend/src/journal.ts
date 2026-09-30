@@ -1,5 +1,5 @@
 import { api, ApiError } from './api';
-import { fromWorkout, newDraft, toRequest } from './domain';
+import { fromWorkout, newDraft, toRequest, today } from './domain';
 import type { Storage } from './db';
 import type { Draft, Plan, Workout } from './types';
 
@@ -8,6 +8,13 @@ type State = {
   connection: 'checking' | 'available' | 'offline'; pendingWrites: number; localError: string | null;
   message: string | null; syncing: string[]; conflict: { day: string; server: Workout } | null;
 };
+function draftMatchesPlan(draft: Draft, plan: Plan): boolean {
+  return draft.exercises.length === plan.exercises.length &&
+    draft.exercises.every((exercise, i) => {
+      const definition = plan.exercises[i];
+      return exercise.exercise_id === definition.exercise_id && exercise.name === definition.name && exercise.unit === definition.unit;
+    });
+}
 export class Journal {
   state: State = { ready: false, plan: null, drafts: {}, documents: {}, connection: 'checking',
     pendingWrites: 0, localError: null, message: null, syncing: [], conflict: null };
@@ -62,6 +69,10 @@ export class Journal {
       this.persist(() => this.db.plan(plan));
       this.persist(() => this.db.documents(Object.values(merged)));
       for (const draft of Object.values(this.state.drafts)) {
+        if (!draftMatchesPlan(draft, plan)) {
+          this.setDraft(newDraft(draft.date, plan, Object.values(merged)));
+          continue;
+        }
         const document = merged[draft.date];
         if (document && !draft.dirty && !draft.gitPending && !this.state.syncing.includes(draft.date) && document.revision !== draft.baseRevision) {
           this.setDraft(fromWorkout(document, draft.generation + 1));
@@ -75,7 +86,15 @@ export class Journal {
     this.persist(() => this.db.draft(draft));
   }
   ensure(day: string) {
-    if (this.state.drafts[day]) return;
+    const existingDraft = this.state.drafts[day];
+    if (existingDraft) {
+      const currentPlan = this.state.plan;
+      if (!currentPlan) return;
+      if (!draftMatchesPlan(existingDraft, currentPlan)) {
+        this.setDraft(newDraft(day, currentPlan, Object.values(this.state.documents)));
+      }
+      return;
+    }
     const existing = this.state.documents[day];
     if (existing) this.setDraft(fromWorkout(existing));
     else if (this.state.plan) this.setDraft(newDraft(day, this.state.plan, Object.values(this.state.documents)));

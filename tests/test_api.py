@@ -18,8 +18,10 @@ def test_plan_and_openapi(environment):
     plan = client.get("/api/plan").json()
     assert plan["default_sets"] == 3
     assert [item["exercise_id"] for item in plan["exercises"]] == [
-        "bench_press", "squat", "pull_up", "lunge", "push_up", "plank"]
-    assert plan["exercises"][-1]["unit"] == "sec"
+        "hack_squat_machine", "standing_leg_curl", "standing_calf_raise", "adductor_machine",
+        "seated_supported_biceps_curl", "hammer_curl", "single_arm_overhead_triceps",
+        "straight_bar_pushdown", "barbell_row", "single_arm_machine_row", "cable_crunch", "side_ball_twist"]
+    assert plan["exercises"][-1]["unit"] == "kg"
     schema = client.get("/openapi.json").json()
     assert "put" in schema["paths"]["/api/workouts/{date}"]
     assert client.get("/docs").status_code == 200
@@ -212,10 +214,10 @@ def test_progress_inclusive_window_and_units(environment, payload, days):
     progress = client.get("/api/progress", params=params).json()
     by_key = {(item["exercise_id"], item["unit"]): item for item in progress}
     assert len(by_key) == 4
-    assert by_key[("bench_press", "kg")]["points"] == [{"date": start.isoformat(), "value": 23.5}]
-    assert by_key[("bench_press", "sec")]["points"] == [{"date": end.isoformat(), "value": 23.5}]
-    assert [p["value"] for p in by_key[("squat", "kg")]["points"]] == [0, 0]
-    assert [p["value"] for p in by_key[("plank", "sec")]["points"]] == [60, 60]
+    assert by_key[("hack_squat_machine", "kg")]["points"] == [{"date": start.isoformat(), "value": 23.5}]
+    assert by_key[("hack_squat_machine", "sec")]["points"] == [{"date": end.isoformat(), "value": 23.5}]
+    assert [p["value"] for p in by_key[("standing_leg_curl", "kg")]["points"]] == [0, 0]
+    assert [p["value"] for p in by_key[("side_ball_twist", "kg")]["points"]] == [60, 60]
 
 
 def test_concurrent_writers_cannot_overwrite_same_revision(environment, payload):

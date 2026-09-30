@@ -128,6 +128,89 @@ h2 {
   font-size:13px;
   margin:10px 0 0;
 }
+.plans-view {
+  display:grid;
+  gap:12px;
+}
+.plans-intro {
+  padding:4px 6px 2px;
+}
+.plans-intro h2 {
+  margin:0 0 5px;
+  font-size:25px;
+}
+.eyebrow {
+  display:block;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.plans-dashboard {
+  display:grid;
+  gap:12px;
+}
+.last-workout {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  padding:14px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface);
+}
+.last-workout strong {
+  font-size:18px;
+}
+.last-workout time {
+  color:var(--muted);
+  font-size:13px;
+}
+.plan-list {
+  display:grid;
+  gap:10px;
+}
+.plan-card {
+  display:grid;
+  gap:9px;
+  width:100%;
+  padding:16px;
+  text-align:left;
+  border:1px solid var(--border);
+  border-radius:17px;
+  background:var(--surface);
+}
+.plan-card.ready {
+  border-color:var(--accent);
+}
+.plan-card.pending {
+  cursor:default;
+  opacity:.7;
+}
+.plan-card strong {
+  font-size:20px;
+}
+.plan-description {
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.45;
+}
+.plan-action {
+  display:flex;
+  align-items:center;
+  gap:5px;
+  color:var(--accent);
+  font-size:14px;
+  font-weight:600;
+}
+.plan-card.pending .plan-action {
+  color:var(--muted);
+}
+.plans-footnote {
+  margin:2px 6px 0;
+}
 .source {
   margin-top:15px;
 }
@@ -275,7 +358,7 @@ main {
 }
 .set-head,.set-row {
   display:grid;
-  grid-template-columns:28px minmax(0,1fr) minmax(0,1fr);
+  grid-template-columns:54px minmax(0,1fr) minmax(0,1fr);
   gap:10px;
   align-items:start;
 }
@@ -290,7 +373,7 @@ main {
 .set-number {
   font-size:14px;
   color:var(--muted);
-  text-align:center;
+  text-align:left;
   padding-top:15px;
 }
 .input-wrap input {
@@ -566,5 +649,9 @@ select {
   .save-bar,.navigation {
     border-left:1px solid var(--border);
     border-right:1px solid var(--border);
+  }
+  .plans-dashboard {
+    grid-template-columns:minmax(0,1.25fr) minmax(150px,.75fr);
+    align-items:start;
   }
 }

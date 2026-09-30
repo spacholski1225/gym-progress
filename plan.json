@@ -2,11 +2,17 @@
   "schema_version": 1,
   "default_sets": 3,
   "exercises": [
-    {"exercise_id": "bench_press", "name": "Wyciskanie leżąc", "unit": "kg"},
-    {"exercise_id": "squat", "name": "Przysiady", "unit": "kg"},
-    {"exercise_id": "pull_up", "name": "Podciągnięcia", "unit": "kg"},
-    {"exercise_id": "lunge", "name": "Wykroki", "unit": "kg"},
-    {"exercise_id": "push_up", "name": "Pompki", "unit": "kg"},
-    {"exercise_id": "plank", "name": "Plank", "unit": "sec"}
+    {"exercise_id": "hack_squat_machine", "name": "Hack squat na maszynie — nogi", "unit": "kg"},
+    {"exercise_id": "standing_leg_curl", "name": "Maszyna na dwójki stojąc — nogi", "unit": "kg"},
+    {"exercise_id": "standing_calf_raise", "name": "Łydki stojąc — nogi", "unit": "kg"},
+    {"exercise_id": "adductor_machine", "name": "Przywodziciele na maszynie — nogi", "unit": "kg"},
+    {"exercise_id": "seated_supported_biceps_curl", "name": "Biceps siedząc, w oparciu o ławkę — biceps", "unit": "kg"},
+    {"exercise_id": "hammer_curl", "name": "Biceps młotkowo — biceps", "unit": "kg"},
+    {"exercise_id": "single_arm_overhead_triceps", "name": "Triceps za głową, jednorącz — triceps", "unit": "kg"},
+    {"exercise_id": "straight_bar_pushdown", "name": "Triceps prosty gryf na bramie — triceps", "unit": "kg"},
+    {"exercise_id": "barbell_row", "name": "Wiosłowanie sztangą — plecy", "unit": "kg"},
+    {"exercise_id": "single_arm_machine_row", "name": "Wiosłowanie na maszynie jednorącz — plecy", "unit": "kg"},
+    {"exercise_id": "cable_crunch", "name": "Przyciąganie linki — brzuch", "unit": "kg"},
+    {"exercise_id": "side_ball_twist", "name": "Skręty do boku z piłką — brzuch", "unit": "kg"}
   ]
 }

@@ -3,12 +3,13 @@ import { ArrowLeft, ChevronRight, Dumbbell, History, ChartNoAxesCombined, Refres
 import { api } from './api';
 import { formatDay, isDay, parseInput, progress, shiftDay, today } from './domain';
 import type { Journal } from './journal';
-import type { Draft, InputExercise, Series, Unit } from './types';
+import { trainingPlans } from './plans';
+import type { Draft, InputExercise, Plan, Series, Unit, Workout } from './types';
 import { Plot } from './Plot';
 
 function readRoute() {
   const [page, day, exercise] = location.hash.slice(2).split('/');
-  return { page: ['history', 'progress'].includes(page) ? page : 'workout',
+  return { page: ['plans', 'history', 'progress'].includes(page) ? page : page ? 'workout' : 'plans',
     day: day && isDay(day) ? day : today(), exercise: exercise ?? null };
 }
 function navigate(path: string) { location.hash = `/${path}`; }
@@ -30,40 +31,48 @@ export function App({ journal, updateAvailable, applyUpdate }: {
   const [route, setRoute] = useState(readRoute);
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    const change = () => { setRoute(readRoute()); journal.clearMessage(); window.scrollTo(0, 0); };
+    const restoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = 'manual';
+    const scrollTop = () => { window.requestAnimationFrame(() => window.scrollTo(0, 0)); };
+    const change = () => { setRoute(readRoute()); journal.clearMessage(); scrollTop(); };
     const online = () => { void journal.refresh(); };
     window.addEventListener('hashchange', change); window.addEventListener('online', online);
-    return () => { window.removeEventListener('hashchange', change); window.removeEventListener('online', online); };
+    return () => {
+      window.removeEventListener('hashchange', change); window.removeEventListener('online', online);
+      window.history.scrollRestoration = restoration;
+    };
   }, [journal]);
   useEffect(() => {
-    if (state.ready && route.page === 'workout') journal.ensure(route.day);
-  }, [state.ready, state.plan, route.page, route.day, journal]);
-  useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [route.page, route.day, route.exercise]);
+    heading.current?.focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+  }, [route.page, route.day, route.exercise]);
   const draft = state.drafts[route.day];
   const exerciseIndex = draft?.exercises.findIndex(e => e.exercise_id === route.exercise) ?? -1;
   const detail = route.page === 'workout' && exerciseIndex >= 0;
   const syncing = state.syncing.includes(route.day);
-  const title = detail ? draft.exercises[exerciseIndex].name : route.page === 'history' ? 'Historia' : route.page === 'progress' ? 'Postępy' : 'Trening';
+  const title = detail ? draft.exercises[exerciseIndex].name
+    : route.page === 'plans' ? 'Plany treningowe'
+    : route.page === 'history' ? 'Historia'
+    : route.page === 'progress' ? 'Postępy' : 'Plan nogi';
   const exportAll = () => download({ plan: state.plan, drafts: state.drafts, workouts: state.documents }, `trening-kopia-${today()}.json`);
 
   return <div className={`app ${detail ? 'detail-mode' : ''}`}>
     <header className="header">
-      {detail && <button className="back" onClick={() => navigate(`workout/${route.day}`)}><ArrowLeft size={18} /> Lista ćwiczeń</button>}
+      {route.page !== 'plans' && <button className="back" onClick={() => navigate('plans')}><ArrowLeft size={18} /> Wybór planu</button>}
       <div className="title-row"><h1 ref={heading} tabIndex={-1}>{title}</h1>
         {!detail && <button className="icon-button" aria-label="Odśwież dane z serwera" disabled={state.connection === 'checking'} onClick={() => void journal.refresh()}><RefreshCw size={19} className={state.connection === 'checking' ? 'spin' : ''} /></button>}
       </div>
       {detail ? <p className="muted">Ćwiczenie {exerciseIndex + 1} z {draft.exercises.length} · {formatDay(route.day, true)}</p>
-        : route.page === 'workout' && <div className="date-row"><label htmlFor="workout-day">Dzień treningu</label>
-          <input id="workout-day" aria-label="Dzień treningu" type="date" value={route.day} max={today()} onChange={event => { if (isDay(event.target.value)) navigate(`workout/${event.target.value}`); }} /></div>}
+        : route.page === 'workout' && <><p className="muted plan-context">Plan A</p><div className="date-row"><label htmlFor="workout-day">Dzień treningu</label>
+          <input id="workout-day" aria-label="Dzień treningu" type="date" value={route.day} max={today()} onChange={event => { if (isDay(event.target.value)) navigate(`workout/${event.target.value}`); }} /></div></>}
       {!detail && state.connection === 'offline' && <p className="connection"><WifiOff size={15} /> Serwer niedostępny · dane z telefonu</p>}
       {!detail && route.page === 'workout' && draft?.copiedFrom && <p className="muted source">Wartości z treningu · {formatDay(draft.copiedFrom, true)}</p>}
     </header>
 
     <main>
       {updateAvailable && <aside className="notice"><p>Dostępna jest nowa wersja aplikacji.</p><button className="text-button" disabled={state.pendingWrites > 0 || state.syncing.length > 0 || !!state.localError} onClick={applyUpdate}>Uruchom ponownie</button></aside>}
-      {state.localError && <aside className="notice error" role="alert"><p>{state.localError}</p><div className="actions"><button className="text-button" onClick={() => void journal.retryLocal()}>Ponów zapis lokalny</button><button className="text-button" onClick={exportAll}><Download size={16} /> Pobierz kopię</button></div></aside>}
-      {state.message && <aside className="notice" role="alert"><p>{state.message}</p><button className="text-button" onClick={journal.clearMessage}>Zamknij</button></aside>}
       {!state.ready && <p className="empty" role="status">Otwieranie dziennika…</p>}
+      {state.ready && route.page === 'plans' && <PlansView ready={!!state.plan} plan={state.plan} documents={state.documents} onSelect={() => navigate(`workout/${today()}`)} />}
       {state.ready && route.page === 'workout' && !draft && <section className="empty"><h2>{state.connection === 'checking' ? 'Pobieranie planu…' : 'Połącz się, aby zacząć'}</h2><p>Pierwsze uruchomienie wymaga połączenia z serwerem przez VPN. Kolejne treningi będą dostępne również offline.</p><button className="secondary" disabled={state.connection === 'checking'} onClick={() => void journal.refresh()}>Spróbuj ponownie</button></section>}
       {draft && route.page === 'workout' && (detail
         ? <ExerciseEditor draft={draft} index={exerciseIndex} journal={journal} />
@@ -81,7 +90,7 @@ export function App({ journal, updateAvailable, applyUpdate }: {
       <p className="save-status" role="status">{state.localError ? 'Problem z zapisem na telefonie' : state.pendingWrites > 0 ? 'Zapisywanie na telefonie…' : detail ? 'Zmiany zapisane na telefonie' : draft.gitPending ? 'Trening na serwerze · ponów zapis historii zmian' : draft.dirty ? 'Na telefonie · do synchronizacji' : 'Trening zapisany na serwerze'}</p>
     </div>}
     {!detail && <nav className="navigation" aria-label="Główna nawigacja">
-      <a href={`#/workout/${today()}`} aria-current={route.page === 'workout' ? 'page' : undefined}><Dumbbell size={22} /><span>Trening</span></a>
+      <a href="#/plans" aria-current={route.page === 'plans' ? 'page' : undefined}><Dumbbell size={22} /><span>Trening</span></a>
       <a href="#/history" aria-current={route.page === 'history' ? 'page' : undefined}><History size={22} /><span>Historia</span></a>
       <a href="#/progress" aria-current={route.page === 'progress' ? 'page' : undefined}><ChartNoAxesCombined size={22} /><span>Postępy</span></a>
     </nav>}
@@ -89,12 +98,48 @@ export function App({ journal, updateAvailable, applyUpdate }: {
   </div>;
 }
 
+function PlansView({ ready, plan, documents, onSelect }: {
+  ready: boolean; plan: Plan | null; documents: Record<string, Workout>; onSelect: () => void;
+}) {
+  const planIds = plan?.exercises.map(exercise => exercise.exercise_id).join(':');
+  const lastWorkout = Object.values(documents)
+    .filter(workout => workout.exercises.map(exercise => exercise.exercise_id).join(':') === planIds)
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  return <section className="plans-view" aria-label="Wybór planu treningowego">
+    <div className="plans-intro">
+      <p className="eyebrow">Twój dziennik</p>
+      <h2>Wybierz plan</h2>
+      <p className="muted">Plan A jest gotowy. Plany B i C pojawią się tutaj, gdy ich ćwiczenia będą ustalone.</p>
+    </div>
+    <div className="plans-dashboard">
+      <div className="plan-list">
+        {trainingPlans.map(plan => {
+          const available = plan.status === 'ready' && ready;
+          return <button key={plan.id} className={`plan-card ${plan.status}`} disabled={!available} onClick={plan.status === 'ready' ? onSelect : undefined}
+            aria-label={`${plan.title}: ${plan.status === 'ready' ? 'otwórz' : 'w przygotowaniu'}`}>
+            <span className="plan-label">PLAN {plan.id}</span>
+            <strong>{plan.title}</strong>
+            <span className="plan-description">{plan.description}</span>
+            <span className="plan-action">{plan.status === 'ready' ? (ready ? 'Otwórz plan' : 'Ładowanie planu…') : 'W przygotowaniu'} {plan.status === 'ready' && <ChevronRight size={17} />}</span>
+          </button>;
+        })}
+      </div>
+      <aside className="last-workout" aria-label="Ostatni zapisany trening">
+        <span className="eyebrow">Ostatni zapisany trening</span>
+        {lastWorkout ? <><strong>Trening</strong><time dateTime={lastWorkout.date}>{formatDay(lastWorkout.date)}</time></>
+          : <p className="muted">Brak zapisanych treningów.</p>}
+      </aside>
+    </div>
+    <p className="muted plans-footnote">Harmonogram kolejnych treningów nie jest jeszcze wyznaczany.</p>
+  </section>;
+}
+
 function ExerciseEditor({ draft, index, journal }: { draft: Draft; index: number; journal: Journal }) {
   const exercise = draft.exercises[index];
   const edit = (transform: (value: InputExercise) => void) => journal.edit(draft.date, d => transform(d.exercises[index]));
   return <section className="editor" aria-label={`Serie: ${exercise.name}`}>
     <div className="set-head"><span>Seria</span><span>{exercise.unit === 'kg' ? 'Ciężar · kg' : 'Czas · sec'}</span><span>Powtórzenia</span></div>
-    {exercise.sets.map((set, i) => <div className="set-row" key={i}><span className="set-number">{i + 1}</span>
+    {exercise.sets.map((set, i) => <div className="set-row" key={i}><span className="set-number">Seria {i + 1}</span>
       {(['value', 'reps'] as const).map(field => {
         let error = ''; try { parseInput(set[field], field); } catch (e) { error = (e as Error).message; }
         const label = `${exercise.name}, seria ${i + 1}, ${field === 'value' ? exercise.unit : 'powtórzenia'}`;
