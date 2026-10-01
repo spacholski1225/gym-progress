@@ -192,8 +192,21 @@ function ProgressView({ journal }: { journal: Journal }) {
   const [end, setEnd] = useState(today());
   const start = shiftDay(end, -(days - 1));
   const [remote, setRemote] = useState<{ key: string; series: Series[] } | null>(null);
+  const [plans, setPlans] = useState<Record<string, Plan>>({});
   const [loading, setLoading] = useState(false);
   const key = `${start}:${end}`;
+  useEffect(() => {
+    let active = true;
+    const loadPlans = async () => {
+      const loaded: Record<string, Plan> = {};
+      for (const meta of trainingPlans.filter(plan => plan.status === 'ready')) {
+        try { loaded[meta.id] = await api.plan(meta.id); } catch {}
+      }
+      if (active) setPlans(loaded);
+    };
+    void loadPlans();
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
     let active = true;
     setRemote(null); setLoading(true);
@@ -201,17 +214,23 @@ function ProgressView({ journal }: { journal: Journal }) {
     return () => { active = false; };
   }, [key, start, end, state.documents]);
   const series = remote?.key === key ? remote.series : progress(Object.values(state.documents), start, end);
-  const displayed = [...series];
-  for (const exercise of state.plan?.exercises ?? []) {
-    if (!series.some(s => s.exercise_id === exercise.exercise_id && s.unit === exercise.unit)) displayed.push({ ...exercise, points: [] });
-  }
-  displayed.sort((a, b) => (state.plan?.exercises.findIndex(e => e.exercise_id === a.exercise_id) ?? 0) - (state.plan?.exercises.findIndex(e => e.exercise_id === b.exercise_id) ?? 0));
+  const definitions = { ...plans, ...(state.plan?.plan_id ? { [state.plan.plan_id]: state.plan } : {}) };
   return <section aria-label="Wykresy postępów">
     <div className="segmented" aria-label="Zakres wykresów">{([30, 90] as const).map(n => <button key={n} aria-pressed={days === n} onClick={() => setDays(n)}>Ostatnie {n} dni</button>)}</div>
     <div className="date-row period"><label htmlFor="period-end">Do dnia</label><input id="period-end" type="date" value={end} max={today()} onChange={e => { if (isDay(e.target.value)) setEnd(e.target.value); }} /></div>
     <p className="muted footnote">{formatDay(start, true)} – {formatDay(end, true)} · największa wartość z serii. {loading ? 'Odświeżanie…' : remote ? 'Dane z serwera.' : 'Zapisane dane z telefonu.'} Niezsynchronizowane zmiany nie są uwzględniane.</p>
-    <div className="charts">{displayed.map(s => <Plot key={`${s.exercise_id}:${s.unit}`} series={s} start={start} end={end} />)}</div>
-    {!displayed.length && <p className="empty">Brak zapisanych danych w tym zakresie.</p>}
+    <div className="progress-plans">
+      {trainingPlans.map(meta => {
+        const plan = definitions[meta.id];
+        const chartSeries = plan?.exercises.map(exercise => series.find(s => s.exercise_id === exercise.exercise_id && s.unit === exercise.unit) ?? { ...exercise, points: [] }) ?? [];
+        return <section className="progress-plan" key={meta.id} aria-labelledby={`progress-plan-${meta.id}`}>
+          <div className="progress-plan-heading"><p className="eyebrow">Plan {meta.id}</p><h2 id={`progress-plan-${meta.id}`}>{meta.title}</h2></div>
+          {meta.status === 'pending' ? <p className="muted">Plan jest jeszcze w przygotowaniu.</p>
+            : plan ? <div className="charts">{chartSeries.map(s => <Plot key={`${meta.id}:${s.exercise_id}:${s.unit}`} series={s} start={start} end={end} />)}</div>
+            : <p className="muted">Połącz się z serwerem, aby pobrać ćwiczenia tego planu.</p>}
+        </section>;
+      })}
+    </div>
   </section>;
 }
 

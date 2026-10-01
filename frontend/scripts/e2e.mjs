@@ -36,6 +36,7 @@ try {
   }
   assert.equal((await fetch(`${base}/`)).status, 200, 'Build the frontend before E2E tests');
   const plan = await (await fetch(`${base}/api/plan`)).json();
+  const planB = await (await fetch(`${base}/api/plan?id=B`)).json();
   const firstExercise = plan.exercises[0];
   const lastExercise = plan.exercises.at(-1);
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -110,7 +111,7 @@ try {
   await expect(page.getByRole('button', { name: 'Zsynchronizowano', exact: true })).toBeVisible();
   assert.equal((await (await fetch(`${base}/api/workouts/${yesterday}`)).json()).exercises.at(-1).sets[0].value, 60);
   await page.getByRole('link', { name: 'Postępy', exact: true }).click();
-  await expect(page.locator('.chart-card')).toHaveCount(plan.exercises.length);
+  await expect(page.locator('.chart-card')).toHaveCount(plan.exercises.length + planB.exercises.length);
   await page.getByRole('button', { name: 'Ostatnie 90 dni' }).click();
   await expect(page.getByRole('button', { name: 'Ostatnie 90 dni' })).toHaveAttribute('aria-pressed', 'true');
   for (const width of [320, 390, 768]) {

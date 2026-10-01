@@ -505,6 +505,20 @@ select {
 .period {
   margin-top:14px;
 }
+.progress-plans {
+  display:grid;
+  gap:28px;
+  margin-top:24px;
+}
+.progress-plan-heading {
+  margin-bottom:12px;
+}
+.progress-plan-heading .eyebrow {
+  margin-bottom:4px;
+}
+.progress-plan-heading h2 {
+  margin:0;
+}
 .charts {
   display:grid;
   gap:14px;
