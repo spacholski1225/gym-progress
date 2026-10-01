@@ -10,10 +10,11 @@ import { Plot } from './Plot';
 function readRoute() {
   const [page, first, second, third] = location.hash.slice(2).split('/');
   const hasPlan = page === 'workout' && ['A', 'B', 'C'].includes(first);
+  const progressPlan = page === 'progress' && ['A', 'B', 'C'].includes(first) ? first : null;
   const planId = hasPlan ? first : 'A';
   const day = hasPlan ? second : first;
   return { page: ['plans', 'history', 'progress'].includes(page) ? page : page ? 'workout' : 'plans',
-    planId, day: day && isDay(day) ? day : today(), exercise: (hasPlan ? third : second) ?? null };
+    planId, progressPlan, day: day && isDay(day) ? day : today(), exercise: (hasPlan ? third : second) ?? null };
 }
 function navigate(path: string) { location.hash = `/${path}`; }
 function download(value: unknown, filename: string) {
@@ -48,7 +49,7 @@ export function App({ journal, updateAvailable, applyUpdate }: {
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
     window.scrollTo(0, 0);
-  }, [route.page, route.day, route.exercise]);
+  }, [route.page, route.progressPlan, route.day, route.exercise]);
   useEffect(() => {
     if (!state.ready || route.page !== 'workout') return;
     if ((state.plan?.plan_id ?? 'A') !== route.planId) {
@@ -61,11 +62,13 @@ export function App({ journal, updateAvailable, applyUpdate }: {
   const exerciseIndex = draft?.exercises.findIndex(e => e.exercise_id === route.exercise) ?? -1;
   const detail = route.page === 'workout' && exerciseIndex >= 0;
   const syncing = state.syncing.includes(route.day);
-  const selectedPlan = trainingPlans.find(plan => plan.id === route.planId);
+  const contextPlanId = route.page === 'progress' && route.progressPlan ? route.progressPlan : route.planId;
+  const selectedPlan = trainingPlans.find(plan => plan.id === contextPlanId);
   const title = detail ? draft.exercises[exerciseIndex].name
     : route.page === 'plans' ? 'Plany treningowe'
     : route.page === 'history' ? 'Historia'
-    : route.page === 'progress' ? 'Postępy' : selectedPlan?.title ?? 'Plan treningowy';
+    : route.page === 'progress' ? (route.progressPlan ? selectedPlan?.title ?? 'Postępy' : 'Postępy')
+    : selectedPlan?.title ?? 'Plan treningowy';
   const exportAll = () => download({ plan: state.plan, drafts: state.drafts, workouts: state.documents }, `trening-kopia-${today()}.json`);
 
   return <div className={`app ${detail ? 'detail-mode' : ''}`}>
@@ -91,7 +94,7 @@ export function App({ journal, updateAvailable, applyUpdate }: {
           <span className="exercise-number">{String(i + 1).padStart(2, '0')}</span><span className="exercise-description"><strong>{exercise.name}</strong><span>{summary(exercise)}</span></span><ChevronRight size={18} aria-hidden="true" />
         </button>)}</div>)}
       {state.ready && route.page === 'history' && <HistoryView journal={journal} planId={route.planId} onExport={exportAll} />}
-      {state.ready && route.page === 'progress' && <ProgressView journal={journal} />}
+      {state.ready && route.page === 'progress' && (route.progressPlan ? <ProgressView journal={journal} planId={route.progressPlan} /> : <ProgressPlansView />)}
     </main>
 
     {draft && route.page === 'workout' && <div className={`save-bar ${detail ? 'detail-save' : ''}`}>
@@ -186,27 +189,47 @@ function HistoryView({ journal, planId, onExport }: { journal: Journal; planId: 
   </section>;
 }
 
-function ProgressView({ journal }: { journal: Journal }) {
+function ProgressPlansView() {
+  return <section className="plans-view" aria-label="Wybór planu do postępów">
+    <div className="plans-intro">
+      <p className="eyebrow">Postępy</p>
+      <h2>Wybierz plan</h2>
+      <p className="muted">Wybierz plan, aby zobaczyć wykresy tylko dla jego ćwiczeń.</p>
+    </div>
+    <div className="plans-dashboard">
+      <div className="plan-list">
+        {trainingPlans.map(plan => {
+          const available = plan.status === 'ready';
+          return <button key={plan.id} className={`plan-card ${plan.status}`} disabled={!available} onClick={available ? () => navigate(`progress/${plan.id}`) : undefined}
+            aria-label={`${plan.title}: ${available ? 'pokaż postępy' : 'w przygotowaniu'}`}>
+            <span className="plan-label">PLAN {plan.id}</span>
+            <strong>{plan.title}</strong>
+            <span className="plan-description">{plan.description}</span>
+            <span className="plan-action">{available ? 'Pokaż wykresy' : 'W przygotowaniu'} {available && <ChevronRight size={17} />}</span>
+          </button>;
+        })}
+      </div>
+    </div>
+    <p className="muted plans-footnote">Wykresy pokazują największą wartość z serii w wybranym okresie.</p>
+  </section>;
+}
+
+function ProgressView({ journal, planId }: { journal: Journal; planId: string }) {
   const state = useSyncExternalStore(journal.subscribe, journal.snapshot);
   const [days, setDays] = useState<30 | 90>(30);
   const [end, setEnd] = useState(today());
   const start = shiftDay(end, -(days - 1));
   const [remote, setRemote] = useState<{ key: string; series: Series[] } | null>(null);
-  const [plans, setPlans] = useState<Record<string, Plan>>({});
+  const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(false);
   const key = `${start}:${end}`;
+  const meta = trainingPlans.find(candidate => candidate.id === planId);
   useEffect(() => {
     let active = true;
-    const loadPlans = async () => {
-      const loaded: Record<string, Plan> = {};
-      for (const meta of trainingPlans.filter(plan => plan.status === 'ready')) {
-        try { loaded[meta.id] = await api.plan(meta.id); } catch {}
-      }
-      if (active) setPlans(loaded);
-    };
-    void loadPlans();
+    setPlan(null);
+    api.plan(planId).then(value => { if (active) setPlan(value); }).catch(() => {});
     return () => { active = false; };
-  }, []);
+  }, [planId]);
   useEffect(() => {
     let active = true;
     setRemote(null); setLoading(true);
@@ -214,22 +237,15 @@ function ProgressView({ journal }: { journal: Journal }) {
     return () => { active = false; };
   }, [key, start, end, state.documents]);
   const series = remote?.key === key ? remote.series : progress(Object.values(state.documents), start, end);
-  const definitions = { ...plans, ...(state.plan?.plan_id ? { [state.plan.plan_id]: state.plan } : {}) };
-  return <section aria-label="Wykresy postępów">
-    <div className="segmented" aria-label="Zakres wykresów">{([30, 90] as const).map(n => <button key={n} aria-pressed={days === n} onClick={() => setDays(n)}>Ostatnie {n} dni</button>)}</div>
-    <div className="date-row period"><label htmlFor="period-end">Do dnia</label><input id="period-end" type="date" value={end} max={today()} onChange={e => { if (isDay(e.target.value)) setEnd(e.target.value); }} /></div>
-    <p className="muted footnote">{formatDay(start, true)} – {formatDay(end, true)} · największa wartość z serii. {loading ? 'Odświeżanie…' : remote ? 'Dane z serwera.' : 'Zapisane dane z telefonu.'} Niezsynchronizowane zmiany nie są uwzględniane.</p>
-    <div className="progress-plans">
-      {trainingPlans.map(meta => {
-        const plan = definitions[meta.id];
-        const chartSeries = plan?.exercises.map(exercise => series.find(s => s.exercise_id === exercise.exercise_id && s.unit === exercise.unit) ?? { ...exercise, points: [] }) ?? [];
-        return <section className="progress-plan" key={meta.id} aria-labelledby={`progress-plan-${meta.id}`}>
-          <div className="progress-plan-heading"><p className="eyebrow">Plan {meta.id}</p><h2 id={`progress-plan-${meta.id}`}>{meta.title}</h2></div>
-          {meta.status === 'pending' ? <p className="muted">Plan jest jeszcze w przygotowaniu.</p>
-            : plan ? <div className="charts">{chartSeries.map(s => <Plot key={`${meta.id}:${s.exercise_id}:${s.unit}`} series={s} start={start} end={end} />)}</div>
-            : <p className="muted">Połącz się z serwerem, aby pobrać ćwiczenia tego planu.</p>}
-        </section>;
-      })}
+  const chartSeries = plan?.exercises.map(exercise => series.find(s => s.exercise_id === exercise.exercise_id && s.unit === exercise.unit) ?? { ...exercise, points: [] }) ?? [];
+  return <section aria-label={`Wykresy postępów: ${meta?.title ?? `Plan ${planId}`}`}>
+    <div className="progress-plan">
+      <div className="progress-plan-heading"><p className="eyebrow">Plan {planId}</p><h2>{meta?.title ?? `Plan ${planId}`}</h2></div>
+      <div className="segmented" aria-label="Zakres wykresów">{([30, 90] as const).map(n => <button key={n} aria-pressed={days === n} onClick={() => setDays(n)}>Ostatnie {n} dni</button>)}</div>
+      <div className="date-row period"><label htmlFor="period-end">Do dnia</label><input id="period-end" type="date" value={end} max={today()} onChange={e => { if (isDay(e.target.value)) setEnd(e.target.value); }} /></div>
+      <p className="muted footnote">{formatDay(start, true)} – {formatDay(end, true)} · największa wartość z serii. {loading ? 'Odświeżanie…' : remote ? 'Dane z serwera.' : 'Zapisane dane z telefonu.'} Niezsynchronizowane zmiany nie są uwzględniane.</p>
+      {plan ? <div className="charts">{chartSeries.map(s => <Plot key={`${planId}:${s.exercise_id}:${s.unit}`} series={s} start={start} end={end} />)}</div>
+        : <p className="muted">Połącz się z serwerem, aby pobrać ćwiczenia tego planu.</p>}
     </div>
   </section>;
 }
