@@ -43,7 +43,12 @@ export function fromWorkout(workout: Workout, generation = 0): Draft {
   };
 }
 export function newDraft(day: string, plan: Plan, documents: Workout[]): Draft {
-  const previous = documents.filter(w => w.date < day).sort((a, b) => b.date.localeCompare(a.date))[0];
+  const previous = documents.filter(w => w.date < day &&
+    w.exercises.length === plan.exercises.length &&
+    w.exercises.every((exercise, i) => {
+      const definition = plan.exercises[i];
+      return exercise.exercise_id === definition.exercise_id && exercise.unit === definition.unit;
+    })).sort((a, b) => b.date.localeCompare(a.date))[0];
   return {
     date: day, baseRevision: null, generation: 0, dirty: true, gitPending: false,
     copiedFrom: previous?.date ?? null,

@@ -22,6 +22,13 @@ describe('workout data', () => {
     expect(toRequest(draft).exercises[0].sets[1]).toEqual({ value: 0, reps: null });
     expect(draft.dirty).toBe(true);
   });
+  it('copies the latest earlier workout matching the selected plan', () => {
+    const otherPlan = document('2026-09-23');
+    otherPlan.exercises[0].exercise_id = 'other_plan_exercise';
+    const draft = newDraft('2026-09-24', plan, [document(), otherPlan]);
+    expect(draft.copiedFrom).toBe('2026-09-21');
+    expect(draft.exercises[0].sets[0].value).toBe('23,5');
+  });
   it('uses empty defaults for a first workout or a mismatched unit', () => {
     expect(newDraft('2026-01-01', plan, []).exercises[0].sets).toHaveLength(3);
     const changed: Plan = { ...plan, exercises: [{ ...plan.exercises[0], unit: 'sec' }] };

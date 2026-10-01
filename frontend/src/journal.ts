@@ -22,6 +22,9 @@ function workoutMatchesPlan(workout: Workout, plan: Plan): boolean {
       return exercise.exercise_id === definition.exercise_id && exercise.name === definition.name && exercise.unit === definition.unit;
     });
 }
+function draftHasInput(draft: Draft): boolean {
+  return draft.exercises.some(exercise => exercise.sets.some(set => set.value !== '' || set.reps !== ''));
+}
 export class Journal {
   state: State = { ready: false, plan: null, drafts: {}, documents: {}, connection: 'checking',
     pendingWrites: 0, localError: null, message: null, syncing: [], conflict: null };
@@ -89,6 +92,11 @@ export class Journal {
         if (!draftMatchesPlan(draft, plan)) {
           if (document && workoutMatchesPlan(document, plan)) this.setDraft(fromWorkout(document, draft.generation + 1));
           else this.setDraft(newDraft(draft.date, plan, Object.values(merged)));
+          continue;
+        }
+        const latest = newDraft(draft.date, plan, Object.values(merged));
+        if (draft.baseRevision === null && !draftHasInput(draft) && draft.copiedFrom !== latest.copiedFrom) {
+          this.setDraft(document && workoutMatchesPlan(document, plan) ? fromWorkout(document, draft.generation + 1) : latest);
           continue;
         }
         if (document && !draft.dirty && !draft.gitPending && !this.state.syncing.includes(draft.date) && document.revision !== draft.baseRevision) {
