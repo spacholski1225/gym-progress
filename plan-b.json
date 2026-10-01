@@ -1,0 +1,16 @@
+{
+  "plan_id": "B",
+  "schema_version": 1,
+  "default_sets": 3,
+  "exercises": [
+    {"exercise_id": "incline_dumbbell_press", "name": "Wyciskanie hantli skos dodatni — klatka", "unit": "kg"},
+    {"exercise_id": "dumbbell_stretch", "name": "Rozciąganie hantlem — klatka", "unit": "kg"},
+    {"exercise_id": "cable_fly", "name": "Rozpiętki na bramie — klatka", "unit": "kg"},
+    {"exercise_id": "smith_machine_shoulder_press", "name": "Wyciskanie żołnierskie Smith — barki", "unit": "kg"},
+    {"exercise_id": "front_dumbbell_raise", "name": "Unoszenie hantla przodem, jednorącz — barki", "unit": "kg"},
+    {"exercise_id": "cable_lateral_raise", "name": "Unoszenie linki do boku na bramie, jednorącz — barki", "unit": "kg"},
+    {"exercise_id": "seated_machine_row", "name": "Wiosłowanie na maszynie — plecy", "unit": "kg"},
+    {"exercise_id": "single_arm_seated_back_row", "name": "Plecy siedząc, jednorącz — plecy", "unit": "kg"},
+    {"exercise_id": "smith_squat", "name": "Przysiad Smitha — nogi", "unit": "kg"}
+  ]
+}

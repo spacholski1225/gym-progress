@@ -44,11 +44,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }})
 
     @app.get("/api/plan", response_model=Plan)
-    def get_plan():
+    def get_plan(plan_id: str = Query("A", alias="id", pattern=r"^[A-Z]$")):
+        path = settings.plan_file if plan_id == "A" else settings.plan_file.with_name(f"plan-{plan_id.lower()}.json")
         try:
-            return Plan.model_validate_json(settings.plan_file.read_text(encoding="utf-8"))
-        except ValueError as exc:
+            plan = Plan.model_validate_json(path.read_text(encoding="utf-8"))
+        except FileNotFoundError as exc:
+            raise HTTPException(404, "Plan not found") from exc
+        except (OSError, ValueError) as exc:
             raise StorageError("Invalid plan configuration") from exc
+        if plan.plan_id != plan_id:
+            raise StorageError("Plan identifier does not match its file")
+        return plan
 
     def check_range(start: ISODate, end: ISODate):
         if start > end:

@@ -119,9 +119,9 @@ Nie uruchamiają one zapisów w prawdziwym `data/`: każdy test ma osobne tymcza
 
 ## Plan i model
 
-`plan.json` zawiera sześć ćwiczeń w kolejności: wyciskanie leżąc, przysiady, podciągnięcia,
-wykroki, pompki, plank. Domyślnie każde ma trzy serie. Jednostka planka to `sec`, innych `kg`.
-W każdym treningu można zmienić liczbę serii (minimum jedna) i jednostkę ćwiczenia.
+`plan.json` zawiera Plan A ukierunkowany na nogi, a `plan-b.json` zawiera Plan B
+ukierunkowany na klatkę, barki, plecy i nogi. Oba plany mają domyślnie trzy serie;
+konkretny trening może zmienić liczbę serii (minimum jedna) i jednostkę ćwiczenia.
 
 Seria zawsze ma oba klucze:
 
@@ -138,14 +138,14 @@ Dla ćwiczeń z masą ciała można umownie używać `0 kg` jako braku dodatkowe
 
 `exercise_id` jest stałe. Zmiana nazwy zachowuje historię; zastąpienie ćwiczenia innym
 wymaga nowego ID. Każdy trening przechowuje własne nazwy, jednostki i serie, stanowiące
-kopię użytego planu. Zmiana `plan.json` wpływa tylko na plan pobierany dla nowych treningów.
+kopię użytego planu. Zmiana pliku wybranego planu wpływa tylko na nowe treningi.
 API nie przepisuje ani nie uzupełnia wcześniejszych dokumentów bieżącym planem.
 
 ## Kontrakt API
 
 | Metoda i ścieżka | Działanie |
 | --- | --- |
-| `GET /api/plan` | Plan, jednostki i domyślna liczba serii |
+| `GET /api/plan?id=A|B` | Wybrany plan, jednostki i domyślna liczba serii |
 | `GET /api/workouts?from=2026-09-01&to=2026-09-30` | Pełne dokumenty, rosnąco według daty |
 | `GET /api/workouts/2026-09-22` | Jeden dokument z rewizją; `404`, jeśli nie istnieje |
 | `PUT /api/workouts/2026-09-22` | Zapis całego dokumentu; `200` z wynikiem zapisu i Git |
@@ -270,8 +270,8 @@ Wykres planka pokazuje najdłuższy czas serii, bez przeliczania przez liczbę p
 ## Pliki i Git
 
 ```text
-plan.json                # Plan początkowy, śledzony przez Git
-data/YYYY-MM-DD.json      # Treningi, śledzone przez Git
+plan.json                # Plan A, śledzony przez Git
+plan-b.json              # Plan B, śledzony przez Git
 training_journal/        # Backend
 tests/                   # Testy API i realnych operacji Git
 deploy/                  # Przykładowa usługa systemd

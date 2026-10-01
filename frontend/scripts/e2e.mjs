@@ -17,6 +17,7 @@ let server, browser;
 let logs = '';
 try {
   await writeFile(resolve(temporary, 'plan.json'), await readFile(resolve(project, 'plan.json')));
+  await writeFile(resolve(temporary, 'plan-b.json'), await readFile(resolve(project, 'plan-b.json')));
   await writeFile(resolve(temporary, '.gitignore'), '.runtime/\n');
   git('init', '-b', 'main'); git('add', '.'); git('commit', '-m', 'Test plan');
   const socket = createServer();
@@ -55,8 +56,8 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   let writes = 0; page.on('request', request => { if (request.method() === 'PUT') writes++; });
   await page.goto(base);
-  await expect(page.getByRole('heading', { name: 'Wybierz plan' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Plan B/ })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /Plan klatka/ })).toBeEnabled();
+  await page.getByRole('button', { name: /Plan nogi/ }).click();
   await expect(page.locator('.exercise-card')).toHaveCount(plan.exercises.length);
   assert.deepEqual(await page.locator('.exercise-card strong').allTextContents(), plan.exercises.map(e => e.name));
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
@@ -73,7 +74,7 @@ try {
   await expect(page.getByRole('textbox', { name: `${firstExercise.name}, seria 2, powtórzenia`, exact: true })).toHaveValue('');
   await page.getByRole('button', { name: 'Gotowe · wróć do listy' }).click();
   await page.getByRole('button', { name: 'Synchronizuj trening', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Sprawdź VPN');
+  await expect(page.getByRole('status')).toHaveText('Na telefonie · do synchronizacji');
   await context.setOffline(false);
   await page.getByRole('button', { name: 'Synchronizuj trening', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Zsynchronizowano', exact: true })).toBeVisible();

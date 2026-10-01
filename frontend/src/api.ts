@@ -17,7 +17,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   } finally { clearTimeout(timeout); }
 }
 export const api = {
-  plan: () => request<Plan>('/plan'),
+  plan: (planId = 'A') => request<Plan>(`/plan?id=${encodeURIComponent(planId)}`),
   list: () => request<Workout[]>('/workouts?from=0001-01-01&to=9999-12-31'),
   get: (day: string) => request<Workout>(`/workouts/${day}`),
   save: (data: WorkoutWrite) => request<SyncResult>(`/workouts/${data.date}`, { method: 'PUT', body: JSON.stringify(data) }),

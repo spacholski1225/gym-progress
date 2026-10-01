@@ -8,9 +8,12 @@ import type { Draft, InputExercise, Plan, Series, Unit, Workout } from './types'
 import { Plot } from './Plot';
 
 function readRoute() {
-  const [page, day, exercise] = location.hash.slice(2).split('/');
+  const [page, first, second, third] = location.hash.slice(2).split('/');
+  const hasPlan = page === 'workout' && ['A', 'B', 'C'].includes(first);
+  const planId = hasPlan ? first : 'A';
+  const day = hasPlan ? second : first;
   return { page: ['plans', 'history', 'progress'].includes(page) ? page : page ? 'workout' : 'plans',
-    day: day && isDay(day) ? day : today(), exercise: exercise ?? null };
+    planId, day: day && isDay(day) ? day : today(), exercise: (hasPlan ? third : second) ?? null };
 }
 function navigate(path: string) { location.hash = `/${path}`; }
 function download(value: unknown, filename: string) {
@@ -46,14 +49,23 @@ export function App({ journal, updateAvailable, applyUpdate }: {
     heading.current?.focus({ preventScroll: true });
     window.scrollTo(0, 0);
   }, [route.page, route.day, route.exercise]);
+  useEffect(() => {
+    if (!state.ready || route.page !== 'workout') return;
+    if ((state.plan?.plan_id ?? 'A') !== route.planId) {
+      void journal.selectPlan(route.planId);
+      return;
+    }
+    journal.ensure(route.day);
+  }, [journal, route.page, route.planId, route.day, state.ready, state.plan?.plan_id]);
   const draft = state.drafts[route.day];
   const exerciseIndex = draft?.exercises.findIndex(e => e.exercise_id === route.exercise) ?? -1;
   const detail = route.page === 'workout' && exerciseIndex >= 0;
   const syncing = state.syncing.includes(route.day);
+  const selectedPlan = trainingPlans.find(plan => plan.id === route.planId);
   const title = detail ? draft.exercises[exerciseIndex].name
     : route.page === 'plans' ? 'Plany treningowe'
     : route.page === 'history' ? 'Historia'
-    : route.page === 'progress' ? 'Postępy' : 'Plan nogi';
+    : route.page === 'progress' ? 'Postępy' : selectedPlan?.title ?? 'Plan treningowy';
   const exportAll = () => download({ plan: state.plan, drafts: state.drafts, workouts: state.documents }, `trening-kopia-${today()}.json`);
 
   return <div className={`app ${detail ? 'detail-mode' : ''}`}>
@@ -63,8 +75,8 @@ export function App({ journal, updateAvailable, applyUpdate }: {
         {!detail && <button className="icon-button" aria-label="Odśwież dane z serwera" disabled={state.connection === 'checking'} onClick={() => void journal.refresh()}><RefreshCw size={19} className={state.connection === 'checking' ? 'spin' : ''} /></button>}
       </div>
       {detail ? <p className="muted">Ćwiczenie {exerciseIndex + 1} z {draft.exercises.length} · {formatDay(route.day, true)}</p>
-        : route.page === 'workout' && <><p className="muted plan-context">Plan A</p><div className="date-row"><label htmlFor="workout-day">Dzień treningu</label>
-          <input id="workout-day" aria-label="Dzień treningu" type="date" value={route.day} max={today()} onChange={event => { if (isDay(event.target.value)) navigate(`workout/${event.target.value}`); }} /></div></>}
+        : route.page === 'workout' && <><p className="muted plan-context">Plan {route.planId}</p><div className="date-row"><label htmlFor="workout-day">Dzień treningu</label>
+          <input id="workout-day" aria-label="Dzień treningu" type="date" value={route.day} max={today()} onChange={event => { if (isDay(event.target.value)) navigate(`workout/${route.planId}/${event.target.value}`); }} /></div></>}
       {!detail && state.connection === 'offline' && <p className="connection"><WifiOff size={15} /> Serwer niedostępny · dane z telefonu</p>}
       {!detail && route.page === 'workout' && draft?.copiedFrom && <p className="muted source">Wartości z treningu · {formatDay(draft.copiedFrom, true)}</p>}
     </header>
@@ -72,19 +84,18 @@ export function App({ journal, updateAvailable, applyUpdate }: {
     <main>
       {updateAvailable && <aside className="notice"><p>Dostępna jest nowa wersja aplikacji.</p><button className="text-button" disabled={state.pendingWrites > 0 || state.syncing.length > 0 || !!state.localError} onClick={applyUpdate}>Uruchom ponownie</button></aside>}
       {!state.ready && <p className="empty" role="status">Otwieranie dziennika…</p>}
-      {state.ready && route.page === 'plans' && <PlansView ready={!!state.plan} plan={state.plan} documents={state.documents} onSelect={() => navigate(`workout/${today()}`)} />}
-      {state.ready && route.page === 'workout' && !draft && <section className="empty"><h2>{state.connection === 'checking' ? 'Pobieranie planu…' : 'Połącz się, aby zacząć'}</h2><p>Pierwsze uruchomienie wymaga połączenia z serwerem przez VPN. Kolejne treningi będą dostępne również offline.</p><button className="secondary" disabled={state.connection === 'checking'} onClick={() => void journal.refresh()}>Spróbuj ponownie</button></section>}
+      {state.ready && route.page === 'plans' && <PlansView ready={!!state.plan} plan={state.plan} documents={state.documents} onSelect={planId => navigate(`workout/${planId}/${today()}`)} />}
       {draft && route.page === 'workout' && (detail
         ? <ExerciseEditor draft={draft} index={exerciseIndex} journal={journal} />
-        : <div className="exercise-list">{draft.exercises.map((exercise, i) => <button key={exercise.exercise_id} className="exercise-card" onClick={() => navigate(`workout/${route.day}/${exercise.exercise_id}`)}>
+        : <div className="exercise-list">{draft.exercises.map((exercise, i) => <button key={exercise.exercise_id} className="exercise-card" onClick={() => navigate(`workout/${route.planId}/${route.day}/${exercise.exercise_id}`)}>
           <span className="exercise-number">{String(i + 1).padStart(2, '0')}</span><span className="exercise-description"><strong>{exercise.name}</strong><span>{summary(exercise)}</span></span><ChevronRight size={18} aria-hidden="true" />
         </button>)}</div>)}
-      {state.ready && route.page === 'history' && <HistoryView journal={journal} onExport={exportAll} />}
+      {state.ready && route.page === 'history' && <HistoryView journal={journal} planId={route.planId} onExport={exportAll} />}
       {state.ready && route.page === 'progress' && <ProgressView journal={journal} />}
     </main>
 
     {draft && route.page === 'workout' && <div className={`save-bar ${detail ? 'detail-save' : ''}`}>
-      <button className="primary" disabled={!detail && (syncing || (!draft.dirty && !draft.gitPending))} onClick={() => detail ? navigate(`workout/${route.day}`) : void journal.sync(route.day)}>
+      <button className="primary" disabled={!detail && (syncing || (!draft.dirty && !draft.gitPending))} onClick={() => detail ? navigate(`workout/${route.planId}/${route.day}`) : void journal.sync(route.day)}>
         {detail ? 'Gotowe · wróć do listy' : syncing ? <><RefreshCw className="spin" size={19} /> Synchronizowanie…</> : !draft.dirty && !draft.gitPending ? <><Check size={19} /> Zsynchronizowano</> : 'Synchronizuj trening'}
       </button>
       <p className="save-status" role="status">{state.localError ? 'Problem z zapisem na telefonie' : state.pendingWrites > 0 ? 'Zapisywanie na telefonie…' : detail ? 'Zmiany zapisane na telefonie' : draft.gitPending ? 'Trening na serwerze · ponów zapis historii zmian' : draft.dirty ? 'Na telefonie · do synchronizacji' : 'Trening zapisany na serwerze'}</p>
@@ -99,7 +110,7 @@ export function App({ journal, updateAvailable, applyUpdate }: {
 }
 
 function PlansView({ ready, plan, documents, onSelect }: {
-  ready: boolean; plan: Plan | null; documents: Record<string, Workout>; onSelect: () => void;
+  ready: boolean; plan: Plan | null; documents: Record<string, Workout>; onSelect: (planId: string) => void;
 }) {
   const planIds = plan?.exercises.map(exercise => exercise.exercise_id).join(':');
   const lastWorkout = Object.values(documents)
@@ -109,13 +120,13 @@ function PlansView({ ready, plan, documents, onSelect }: {
     <div className="plans-intro">
       <p className="eyebrow">Twój dziennik</p>
       <h2>Wybierz plan</h2>
-      <p className="muted">Plan A jest gotowy. Plany B i C pojawią się tutaj, gdy ich ćwiczenia będą ustalone.</p>
+      <p className="muted">Wybierz gotowy plan treningowy. Kolejne plany pojawią się tutaj, gdy ich ćwiczenia będą ustalone.</p>
     </div>
     <div className="plans-dashboard">
       <div className="plan-list">
         {trainingPlans.map(plan => {
           const available = plan.status === 'ready' && ready;
-          return <button key={plan.id} className={`plan-card ${plan.status}`} disabled={!available} onClick={plan.status === 'ready' ? onSelect : undefined}
+          return <button key={plan.id} className={`plan-card ${plan.status}`} disabled={!available} onClick={plan.status === 'ready' ? () => onSelect(plan.id) : undefined}
             aria-label={`${plan.title}: ${plan.status === 'ready' ? 'otwórz' : 'w przygotowaniu'}`}>
             <span className="plan-label">PLAN {plan.id}</span>
             <strong>{plan.title}</strong>
@@ -161,14 +172,14 @@ function ExerciseEditor({ draft, index, journal }: { draft: Draft; index: number
   </section>;
 }
 
-function HistoryView({ journal, onExport }: { journal: Journal; onExport: () => void }) {
+function HistoryView({ journal, planId, onExport }: { journal: Journal; planId: string; onExport: () => void }) {
   const state = useSyncExternalStore(journal.subscribe, journal.snapshot);
   const dates = [...new Set([...Object.keys(state.documents), ...Object.keys(state.drafts)])].sort().reverse();
   return <section aria-label="Zapisane treningi">
     {!dates.length && <p className="empty">Tutaj pojawią się Twoje treningi i lokalne wersje robocze.</p>}
     <div className="history-list">{dates.map(day => {
       const draft = state.drafts[day];
-      return <button className="history-card" key={day} onClick={() => navigate(`workout/${day}`)}><span><strong>{formatDay(day)}</strong><small>{draft?.dirty ? 'Zmiany tylko na telefonie' : draft?.gitPending ? 'Na serwerze · ponów historię zmian' : 'Zapisany na serwerze'}</small></span><ChevronRight size={18} /></button>;
+      return <button className="history-card" key={day} onClick={() => navigate(`workout/${planId}/${day}`)}><span><strong>{formatDay(day)}</strong><small>{draft?.dirty ? 'Zmiany tylko na telefonie' : draft?.gitPending ? 'Na serwerze · ponów historię zmian' : 'Zapisany na serwerze'}</small></span><ChevronRight size={18} /></button>;
     })}</div>
     <button className="text-button export" onClick={onExport}><Download size={17} /> Pobierz kopię danych z telefonu</button>
     <p className="muted footnote">Historia obejmuje zapisane treningi i wersje robocze dostępne na tym urządzeniu.</p>

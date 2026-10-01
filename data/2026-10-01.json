@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-01",
+  "exercises": [
+    {
+      "exercise_id": "incline_dumbbell_press",
+      "name": "Wyciskanie hantli skos dodatni — klatka",
+      "unit": "kg",
+      "sets": [
+        {"value": 12, "reps": 8},
+        {"value": 12, "reps": 8},
+        {"value": 12, "reps": 8}
+      ]
+    },
+    {
+      "exercise_id": "dumbbell_stretch",
+      "name": "Rozciąganie hantlem — klatka",
+      "unit": "kg",
+      "sets": [
+        {"value": 14, "reps": 8},
+        {"value": 14, "reps": 8},
+        {"value": 14, "reps": 8}
+      ]
+    },
+    {
+      "exercise_id": "cable_fly",
+      "name": "Rozpiętki na bramie — klatka",
+      "unit": "kg",
+      "sets": [
+        {"value": 5, "reps": 8},
+        {"value": 5, "reps": 8},
+        {"value": 5, "reps": 8}
+      ]
+    },
+    {
+      "exercise_id": "smith_machine_shoulder_press",
+      "name": "Wyciskanie żołnierskie Smith — barki",
+      "unit": "kg",
+      "sets": [
+        {"value": 10, "reps": 8},
+        {"value": 10, "reps": 8},
+        {"value": 10, "reps": 8}
+      ]
+    },
+    {
+      "exercise_id": "front_dumbbell_raise",
+      "name": "Unoszenie hantla przodem, jednorącz — barki",
+      "unit": "kg",
+      "sets": [
+        {"value": 5, "reps": 6},
+        {"value": 5, "reps": 6},
+        {"value": 5, "reps": 6}
+      ]
+    },
+    {
+      "exercise_id": "cable_lateral_raise",
+      "name": "Unoszenie linki do boku na bramie, jednorącz — barki",
+      "unit": "kg",
+      "sets": [
+        {"value": 2.5, "reps": 6},
+        {"value": 2.5, "reps": 6},
+        {"value": 2.5, "reps": 6}
+      ]
+    },
+    {
+      "exercise_id": "seated_machine_row",
+      "name": "Wiosłowanie na maszynie — plecy",
+      "unit": "kg",
+      "sets": [
+        {"value": 20, "reps": 10},
+        {"value": 20, "reps": 10},
+        {"value": 20, "reps": 10}
+      ]
+    },
+    {
+      "exercise_id": "single_arm_seated_back_row",
+      "name": "Plecy siedząc, jednorącz — plecy",
+      "unit": "kg",
+      "sets": [
+        {"value": 10, "reps": 8},
+        {"value": 10, "reps": 8},
+        {"value": 10, "reps": 8}
+      ]
+    },
+    {
+      "exercise_id": "smith_squat",
+      "name": "Przysiad Smitha — nogi",
+      "unit": "kg",
+      "sets": [
+        {"value": 30, "reps": 8},
+        {"value": 35, "reps": 8},
+        {"value": 35, "reps": 8},
+        {"value": 35, "reps": 8}
+      ]
+    }
+  ],
+  "revision": "c2f3e4a5b6d79801c2f3e4a5b6d79801",
+  "created_at": "2026-10-01T12:00:00Z",
+  "updated_at": "2026-10-01T12:00:00Z"
+}

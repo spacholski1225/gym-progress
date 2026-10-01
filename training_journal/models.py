@@ -43,6 +43,7 @@ class Exercise(ExerciseDefinition):
 
 
 class Plan(Model):
+    plan_id: Annotated[str, Field(pattern=r"^[A-Z]$", min_length=1, max_length=1)] = "A"
     schema_version: Literal[1] = 1
     default_sets: Annotated[int, Field(strict=True, ge=1)]
     exercises: Annotated[list[ExerciseDefinition], Field(min_length=1)]

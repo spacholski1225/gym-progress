@@ -22,6 +22,12 @@ def test_plan_and_openapi(environment):
         "seated_supported_biceps_curl", "hammer_curl", "single_arm_overhead_triceps",
         "straight_bar_pushdown", "barbell_row", "single_arm_machine_row", "cable_crunch", "side_ball_twist"]
     assert plan["exercises"][-1]["unit"] == "kg"
+    plan_b = client.get("/api/plan?id=B").json()
+    assert plan_b["plan_id"] == "B"
+    assert [item["exercise_id"] for item in plan_b["exercises"]] == [
+        "incline_dumbbell_press", "dumbbell_stretch", "cable_fly", "smith_machine_shoulder_press",
+        "front_dumbbell_raise", "cable_lateral_raise", "seated_machine_row",
+        "single_arm_seated_back_row", "smith_squat"]
     schema = client.get("/openapi.json").json()
     assert "put" in schema["paths"]["/api/workouts/{date}"]
     assert client.get("/docs").status_code == 200

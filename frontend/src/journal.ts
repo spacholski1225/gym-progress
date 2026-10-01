@@ -15,6 +15,13 @@ function draftMatchesPlan(draft: Draft, plan: Plan): boolean {
       return exercise.exercise_id === definition.exercise_id && exercise.name === definition.name && exercise.unit === definition.unit;
     });
 }
+function workoutMatchesPlan(workout: Workout, plan: Plan): boolean {
+  return workout.exercises.length === plan.exercises.length &&
+    workout.exercises.every((exercise, i) => {
+      const definition = plan.exercises[i];
+      return exercise.exercise_id === definition.exercise_id && exercise.name === definition.name && exercise.unit === definition.unit;
+    });
+}
 export class Journal {
   state: State = { ready: false, plan: null, drafts: {}, documents: {}, connection: 'checking',
     pendingWrites: 0, localError: null, message: null, syncing: [], conflict: null };
@@ -53,12 +60,21 @@ export class Journal {
     }
     await this.refresh();
   }
+  async selectPlan(planId: string) {
+    if ((this.state.plan?.plan_id ?? 'A') === planId) return;
+    try {
+      const plan = await this.remote.plan(planId);
+      this.emit({ plan, connection: 'available' });
+      this.persist(() => this.db.plan(plan));
+    } catch { this.emit({ connection: 'offline' }); }
+  }
   async refresh() {
     if (this.refreshing) return;
     this.refreshing = true;
     this.emit({ connection: 'checking' });
     try {
-      const [plan, documents] = await Promise.all([this.remote.plan(), this.remote.list()]);
+      const planId = this.state.plan?.plan_id ?? 'A';
+      const [plan, documents] = await Promise.all([this.remote.plan(planId), this.remote.list()]);
       const merged = { ...this.state.documents };
       for (const document of documents) {
         if (!merged[document.date] || merged[document.date].updated_at <= document.updated_at) {
@@ -69,11 +85,12 @@ export class Journal {
       this.persist(() => this.db.plan(plan));
       this.persist(() => this.db.documents(Object.values(merged)));
       for (const draft of Object.values(this.state.drafts)) {
+        const document = merged[draft.date];
         if (!draftMatchesPlan(draft, plan)) {
-          this.setDraft(newDraft(draft.date, plan, Object.values(merged)));
+          if (document && workoutMatchesPlan(document, plan)) this.setDraft(fromWorkout(document, draft.generation + 1));
+          else this.setDraft(newDraft(draft.date, plan, Object.values(merged)));
           continue;
         }
-        const document = merged[draft.date];
         if (document && !draft.dirty && !draft.gitPending && !this.state.syncing.includes(draft.date) && document.revision !== draft.baseRevision) {
           this.setDraft(fromWorkout(document, draft.generation + 1));
         }
@@ -91,12 +108,14 @@ export class Journal {
       const currentPlan = this.state.plan;
       if (!currentPlan) return;
       if (!draftMatchesPlan(existingDraft, currentPlan)) {
-        this.setDraft(newDraft(day, currentPlan, Object.values(this.state.documents)));
+        const existing = this.state.documents[day];
+        if (existing && workoutMatchesPlan(existing, currentPlan)) this.setDraft(fromWorkout(existing, existingDraft.generation + 1));
+        else this.setDraft(newDraft(day, currentPlan, Object.values(this.state.documents)));
       }
       return;
     }
     const existing = this.state.documents[day];
-    if (existing) this.setDraft(fromWorkout(existing));
+    if (existing && this.state.plan && workoutMatchesPlan(existing, this.state.plan)) this.setDraft(fromWorkout(existing));
     else if (this.state.plan) this.setDraft(newDraft(day, this.state.plan, Object.values(this.state.documents)));
   }
   edit(day: string, transform: (draft: Draft) => void) {
