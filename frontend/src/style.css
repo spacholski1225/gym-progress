@@ -356,6 +356,45 @@ main {
   border:1px solid var(--border);
   border-radius:16px;
 }
+.rest-row {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  min-height:44px;
+  margin:-8px -6px 5px;
+}
+.rest-toggle {
+  width:40px;
+  min-height:40px;
+  border:1px solid transparent;
+}
+.rest-toggle.active {
+  color:var(--accent);
+  background:color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.rest-input-wrap {
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  color:var(--muted);
+  font-size:12px;
+}
+.rest-input-wrap input {
+  width:76px;
+  min-height:42px;
+  padding:8px;
+  text-align:center;
+}
+.rest-input-wrap .input-error {
+  position:absolute;
+  top:44px;
+  right:0;
+  width:220px;
+  text-align:right;
+  z-index:1;
+}
 .set-head,.set-row {
   display:grid;
   grid-template-columns:54px minmax(0,1fr) minmax(0,1fr);

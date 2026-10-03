@@ -123,6 +123,10 @@ Nie uruchamiają one zapisów w prawdziwym `data/`: każdy test ma osobne tymcza
 ukierunkowany na klatkę, barki, plecy i nogi. Oba plany mają domyślnie trzy serie;
 konkretny trening może zmienić liczbę serii (minimum jedna) i jednostkę ćwiczenia.
 
+Plan definiuje również `rest_seconds` — domyślną przerwę między seriami ćwiczenia w sekundach.
+Wartość `null` oznacza pustą, nieustawioną przerwę. Nowy trening kopiuje tę wartość z planu,
+a jej zmiana na ekranie ćwiczenia jest zapisywana w konkretnym treningu.
+
 Seria zawsze ma oba klucze:
 
 ```json

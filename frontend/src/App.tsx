@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { ArrowLeft, ChevronRight, Dumbbell, History, ChartNoAxesCombined, RefreshCw, Plus, Minus, Check, WifiOff, Download } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Dumbbell, History, ChartNoAxesCombined, RefreshCw, Plus, Minus, Check, WifiOff, Download, Timer } from 'lucide-react';
 import { api } from './api';
-import { formatDay, isDay, parseInput, progress, shiftDay, today } from './domain';
+import { formatDay, isDay, parseInput, parseRest, progress, shiftDay, today } from './domain';
 import type { Journal } from './journal';
 import { trainingPlans } from './plans';
 import type { Draft, InputExercise, Plan, Series, Unit, Workout } from './types';
@@ -25,7 +25,8 @@ function download(value: unknown, filename: string) {
 function summary(exercise: InputExercise) {
   const rows = exercise.sets.map(set => `${set.reps || '—'} × ${set.value || '—'} ${exercise.unit}`);
   const amounts = [...new Set(rows)];
-  return `${rows.length} ${rows.length === 1 ? 'seria' : rows.length < 5 ? 'serie' : 'serii'} · ${amounts.length === 1 ? amounts[0] : rows.slice(0, 3).join(' / ') + (rows.length > 3 ? ` / +${rows.length - 3}` : '')}`;
+  const rest = exercise.rest_seconds === '' ? '' : ` · ${exercise.rest_seconds} s`;
+  return `${rows.length} ${rows.length === 1 ? 'seria' : rows.length < 5 ? 'serie' : 'serii'} · ${amounts.length === 1 ? amounts[0] : rows.slice(0, 3).join(' / ') + (rows.length > 3 ? ` / +${rows.length - 3}` : '')}${rest}`;
 }
 
 export function App({ journal, updateAvailable, applyUpdate }: {
@@ -89,7 +90,7 @@ export function App({ journal, updateAvailable, applyUpdate }: {
       {!state.ready && <p className="empty" role="status">Otwieranie dziennika…</p>}
       {state.ready && route.page === 'plans' && <PlansView ready={!!state.plan} plan={state.plan} documents={state.documents} onSelect={planId => navigate(`workout/${planId}/${today()}`)} />}
       {draft && route.page === 'workout' && (detail
-        ? <ExerciseEditor draft={draft} index={exerciseIndex} journal={journal} />
+        ? <ExerciseEditor key={route.exercise} draft={draft} index={exerciseIndex} journal={journal} />
         : <div className="exercise-list">{draft.exercises.map((exercise, i) => <button key={exercise.exercise_id} className="exercise-card" onClick={() => navigate(`workout/${route.planId}/${route.day}/${exercise.exercise_id}`)}>
           <span className="exercise-number">{String(i + 1).padStart(2, '0')}</span><span className="exercise-description"><strong>{exercise.name}</strong><span>{summary(exercise)}</span></span><ChevronRight size={18} aria-hidden="true" />
         </button>)}</div>)}
@@ -150,8 +151,23 @@ function PlansView({ ready, plan, documents, onSelect }: {
 
 function ExerciseEditor({ draft, index, journal }: { draft: Draft; index: number; journal: Journal }) {
   const exercise = draft.exercises[index];
+  const [restOpen, setRestOpen] = useState(exercise.rest_seconds !== '');
+  const rest = exercise.rest_seconds ?? '';
   const edit = (transform: (value: InputExercise) => void) => journal.edit(draft.date, d => transform(d.exercises[index]));
+  let restError = '';
+  try { parseRest(rest); } catch (error) { restError = (error as Error).message; }
   return <section className="editor" aria-label={`Serie: ${exercise.name}`}>
+    <div className="rest-row">
+      <button type="button" className={`icon-button rest-toggle ${rest ? 'active' : ''}`} aria-label="Ustaw przerwę między seriami"
+        title="Przerwa między seriami" aria-expanded={restOpen} onClick={() => setRestOpen(open => !open)}><Timer size={19} /></button>
+      {restOpen && <div className="rest-input-wrap">
+        <input id="rest-seconds" type="text" inputMode="numeric" autoComplete="off" aria-label="Przerwa między seriami w sekundach"
+          aria-invalid={!!restError} aria-describedby={restError ? 'rest-seconds-error' : undefined} value={rest} placeholder="—"
+          onFocus={event => event.target.select()} onChange={event => edit(e => { e.rest_seconds = event.target.value; })} />
+        <span aria-hidden="true">sec</span>
+        {restError && <span className="input-error" id="rest-seconds-error">{restError}</span>}
+      </div>}
+    </div>
     <div className="set-head"><span>Seria</span><span>{exercise.unit === 'kg' ? 'Ciężar · kg' : 'Czas · sec'}</span><span>Powtórzenia</span></div>
     {exercise.sets.map((set, i) => <div className="set-row" key={i}><span className="set-number">Seria {i + 1}</span>
       {(['value', 'reps'] as const).map(field => {

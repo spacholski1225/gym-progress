@@ -21,7 +21,7 @@ export function isDay(day: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(day) && !Number.isNaN(Date.parse(day)) &&
     new Date(day).toISOString().slice(0, 10) === day;
 }
-export const numberText = (number: number | null): string => number === null ? '' : String(number).replace('.', ',');
+export const numberText = (number: number | null | undefined): string => number == null ? '' : String(number).replace('.', ',');
 export function parseInput(text: string, field: keyof InputSet): number | null {
   const value = text.trim();
   if (value === '') return null;
@@ -33,11 +33,20 @@ export function parseInput(text: string, field: keyof InputSet): number | null {
   }
   return number;
 }
+export function parseRest(text: string): number | null {
+  const value = text.trim();
+  if (value === '') return null;
+  const number = Number(value);
+  if (!/^\d+$/.test(value) || !Number.isSafeInteger(number)) {
+    throw new Error('Przerwa musi być liczbą całkowitą sekund.');
+  }
+  return number;
+}
 export function fromWorkout(workout: Workout, generation = 0): Draft {
   return {
     date: workout.date, baseRevision: workout.revision, generation, dirty: false,
     gitPending: false, copiedFrom: null,
-    exercises: workout.exercises.map(exercise => ({ ...exercise,
+    exercises: workout.exercises.map(exercise => ({ ...exercise, rest_seconds: numberText(exercise.rest_seconds),
       sets: exercise.sets.map(set => ({ value: numberText(set.value), reps: numberText(set.reps) })),
     })),
   };
@@ -54,7 +63,7 @@ export function newDraft(day: string, plan: Plan, documents: Workout[]): Draft {
     copiedFrom: previous?.date ?? null,
     exercises: plan.exercises.map(exercise => {
       const before = previous?.exercises.find(e => e.exercise_id === exercise.exercise_id && e.unit === exercise.unit);
-      return { ...exercise, sets: before
+      return { ...exercise, rest_seconds: numberText(exercise.rest_seconds), sets: before
         ? before.sets.map(set => ({ value: numberText(set.value), reps: numberText(set.reps) }))
         : Array.from({ length: plan.default_sets }, () => ({ value: '', reps: '' })) };
     }),
@@ -62,7 +71,7 @@ export function newDraft(day: string, plan: Plan, documents: Workout[]): Draft {
 }
 export function toRequest(draft: Draft): WorkoutWrite {
   return { schema_version: 1, date: draft.date, expected_revision: draft.baseRevision,
-    exercises: draft.exercises.map(exercise => ({ ...exercise, sets: exercise.sets.map((set, i) => {
+    exercises: draft.exercises.map(exercise => ({ ...exercise, rest_seconds: parseRest(exercise.rest_seconds), sets: exercise.sets.map((set, i) => {
       try { return { value: parseInput(set.value, 'value'), reps: parseInput(set.reps, 'reps') }; }
       catch (error) { throw new Error(`${exercise.name}, seria ${i + 1}: ${(error as Error).message}`); }
     }) })),

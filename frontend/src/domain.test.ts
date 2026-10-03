@@ -13,6 +13,14 @@ describe('workout data', () => {
     expect(() => parseInput('1,5', 'reps')).toThrow();
     for (const value of ['Infinity', '1e2', '-1', '.', 'abc']) expect(() => parseInput(value, 'value')).toThrow();
   });
+  it('keeps an empty rest by default and serializes configured seconds', () => {
+    const draft = newDraft('2026-01-01', plan, []);
+    expect(draft.exercises[0].rest_seconds).toBe('');
+    draft.exercises[0].rest_seconds = '90';
+    expect(toRequest(draft).exercises[0].rest_seconds).toBe(90);
+    draft.exercises[0].rest_seconds = '';
+    expect(toRequest(draft).exercises[0].rest_seconds).toBe(null);
+  });
   it('copies only the preceding saved workout, preserving order, nulls and series count', () => {
     const draft = newDraft('2026-09-22', plan, [document(), document('2026-09-23')]);
     expect(draft.copiedFrom).toBe('2026-09-21');

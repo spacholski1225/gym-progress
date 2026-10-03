@@ -3,6 +3,16 @@ import { fromWorkout, newDraft, toRequest, today } from './domain';
 import type { Storage } from './db';
 import type { Draft, Plan, Workout } from './types';
 
+function normalizePlan(plan: Plan): Plan {
+  return { ...plan, exercises: plan.exercises.map(exercise => ({ ...exercise, rest_seconds: exercise.rest_seconds ?? null })) };
+}
+function normalizeWorkout(workout: Workout): Workout {
+  return { ...workout, exercises: workout.exercises.map(exercise => ({ ...exercise, rest_seconds: exercise.rest_seconds ?? null })) };
+}
+function normalizeDraft(draft: Draft): Draft {
+  return { ...draft, exercises: draft.exercises.map(exercise => ({ ...exercise, rest_seconds: exercise.rest_seconds ?? '' })) };
+}
+
 type State = {
   ready: boolean; plan: Plan | null; drafts: Record<string, Draft>; documents: Record<string, Workout>;
   connection: 'checking' | 'available' | 'offline'; pendingWrites: number; localError: string | null;
@@ -56,8 +66,11 @@ export class Journal {
   async init() {
     try {
       const cached = await this.db.load();
-      this.emit({ plan: cached.plan, drafts: Object.fromEntries(cached.drafts.map(d => [d.date, d])),
-        documents: Object.fromEntries(cached.documents.map(d => [d.date, d])), ready: true });
+      const plan = cached.plan ? normalizePlan(cached.plan) : null;
+      const drafts = cached.drafts.map(normalizeDraft);
+      const documents = cached.documents.map(normalizeWorkout);
+      this.emit({ plan, drafts: Object.fromEntries(drafts.map(d => [d.date, d])),
+        documents: Object.fromEntries(documents.map(d => [d.date, d])), ready: true });
     } catch {
       this.emit({ ready: true, localError: 'Pamięć telefonu jest niedostępna. Nie zamykaj aplikacji przed zapisaniem danych na serwerze lub pobraniem kopii.' });
     }

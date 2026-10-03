@@ -36,7 +36,7 @@ class ExerciseDefinition(Model):
     exercise_id: Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$", max_length=80)]
     name: Annotated[str, Field(min_length=1, max_length=200)]
     unit: Unit
-
+    rest_seconds: NonnegativeInteger | None = None
 
 class Exercise(ExerciseDefinition):
     sets: Annotated[list[WorkoutSet], Field(min_length=1)]

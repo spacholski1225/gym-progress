@@ -1,7 +1,7 @@
 import type { Plan, Workout } from './types';
 export const plan: Plan = { schema_version: 1, default_sets: 3, exercises: [
-  { exercise_id: 'bench_press', name: 'Wyciskanie leżąc', unit: 'kg' },
-  { exercise_id: 'plank', name: 'Plank', unit: 'sec' },
+  { exercise_id: 'bench_press', name: 'Wyciskanie leżąc', unit: 'kg', rest_seconds: null },
+  { exercise_id: 'plank', name: 'Plank', unit: 'sec', rest_seconds: null },
 ] };
 export function document(day = '2026-09-21', revision = 'a'.repeat(32)): Workout {
   return { schema_version: 1, date: day, revision, created_at: `${day}T12:00:00Z`, updated_at: `${day}T12:00:00Z`, exercises: [

@@ -108,6 +108,13 @@ def test_invalid_numbers(environment, payload, field, value):
     assert put(client, payload).status_code == 422
     assert not settings.data_dir.exists()
 
+@pytest.mark.parametrize("value", [-1, 1.5, True, "90"])
+def test_invalid_rest_seconds(environment, payload, value):
+    client, _, settings = environment
+    payload["exercises"][0]["rest_seconds"] = value
+    assert put(client, payload).status_code == 422
+    assert not settings.data_dir.exists()
+
 
 @pytest.mark.parametrize("number", ["NaN", "Infinity", "-Infinity", "1e999"])
 def test_nonfinite_numbers_are_rejected(environment, payload, number):
