@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "date": "2026-09-28",
+  "exercises": [
+    {
+      "exercise_id": "hack_squat_machine",
+      "name": "Hack squat na maszynie — nogi",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    },
+    {
+      "exercise_id": "standing_leg_curl",
+      "name": "Maszyna na dwójki stojąc — nogi",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    },
+    {
+      "exercise_id": "standing_calf_raise",
+      "name": "Łydki stojąc — nogi",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    },
+    {
+      "exercise_id": "adductor_machine",
+      "name": "Przywodziciele na maszynie — nogi",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    },
+    {
+      "exercise_id": "seated_supported_biceps_curl",
+      "name": "Biceps siedząc, w oparciu o ławkę — biceps",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    },
+    {
+      "exercise_id": "hammer_curl",
+      "name": "Biceps młotkowo — biceps",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    },
+    {
+      "exercise_id": "single_arm_overhead_triceps",
+      "name": "Triceps za głową, jednorącz — triceps",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    },
+    {
+      "exercise_id": "straight_bar_pushdown",
+      "name": "Triceps prosty gryf na bramie — triceps",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    },
+    {
+      "exercise_id": "barbell_row",
+      "name": "Wiosłowanie sztangą — plecy",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    },
+    {
+      "exercise_id": "single_arm_machine_row",
+      "name": "Wiosłowanie na maszynie jednorącz — plecy",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    },
+    {
+      "exercise_id": "cable_crunch",
+      "name": "Przyciąganie linki — brzuch",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    },
+    {
+      "exercise_id": "side_ball_twist",
+      "name": "Skręty do boku z piłką — brzuch",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "instructions": null,
+      "sets": [
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        },
+        {
+          "value": null,
+          "reps": null
+        }
+      ]
+    }
+  ],
+  "revision": "6ded6ab6f3ad460cbf0a09e5d53d599c",
+  "created_at": "2026-10-03T15:15:25.887376Z",
+  "updated_at": "2026-10-03T15:15:25.887376Z"
+}
