@@ -6,11 +6,12 @@ export type Plan = { plan_id?: string; schema_version: 1; default_sets: number; 
 export type Content = { schema_version: 1; date: string; exercises: Exercise[] };
 export type Workout = Content & { revision: string; created_at: string; updated_at: string };
 export type WorkoutWrite = Content & { expected_revision: string | null };
+export type ExercisePhoto = { exercise_id: string; blob: Blob };
+export type InputSet = { value: string; reps: string };
 export type SyncResult = { saved: true; changed: boolean; workout: Workout; git: {
   status: 'committed' | 'unchanged' | 'failed'; commit: string | null; error: string | null;
 } };
 export type DeleteResult = { deleted: true; date: string; git: { status: 'committed' | 'unchanged' | 'failed'; commit: string | null; error: string | null } };
-export type InputSet = { value: string; reps: string };
 export type InputExercise = Omit<ExerciseDefinition, 'rest_seconds' | 'instructions'> & { rest_seconds: string; instructions: string; sets: InputSet[] };
 export type Draft = {
   date: string; exercises: InputExercise[]; baseRevision: string | null;

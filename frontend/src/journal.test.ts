@@ -25,6 +25,19 @@ describe('local storage and synchronization', () => {
     db = storage(`test-${crypto.randomUUID()}`); server = remote(); journal = new Journal(db, server);
     await journal.init(); journal.ensure('2026-09-22'); await journal.flush();
   });
+  it('stores exercise photos locally and restores them after reopening', async () => {
+    const source = new Blob(['photo'], { type: 'image/jpeg' });
+    journal.setPhoto('hack_squat_machine', source);
+    await journal.flush();
+    const reopened = new Journal(db, server);
+    await reopened.init();
+    expect(await reopened.state.photos.hack_squat_machine.text()).toBe('photo');
+    reopened.removePhoto('hack_squat_machine');
+    await reopened.flush();
+    const empty = new Journal(db, server);
+    await empty.init();
+    expect(empty.state.photos.hack_squat_machine).toBeUndefined();
+  });
   it('does not send a workout when opening or editing; reopens offline with local input intact', async () => {
     journal.edit('2026-09-22', d => { d.exercises[0].sets[0].value = ','; });
     await journal.flush();

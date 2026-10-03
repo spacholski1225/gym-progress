@@ -21,6 +21,7 @@ function normalizeDraft(draft: Draft): Draft {
 
 type State = {
   ready: boolean; plan: Plan | null; drafts: Record<string, Draft>; documents: Record<string, Workout>;
+  photos: Record<string, Blob>;
   connection: 'checking' | 'available' | 'offline'; pendingWrites: number; localError: string | null;
   message: string | null; syncing: string[]; conflict: { day: string; server: Workout } | null;
 };
@@ -44,7 +45,7 @@ function draftHasInput(draft: Draft): boolean {
 
 type Remote = Omit<typeof api, 'delete'> & { delete?: typeof api.delete };
 export class Journal {
-  state: State = { ready: false, plan: null, drafts: {}, documents: {}, connection: 'checking',
+  state: State = { ready: false, plan: null, drafts: {}, documents: {}, photos: {}, connection: 'checking',
     pendingWrites: 0, localError: null, message: null, syncing: [], conflict: null };
   private listeners = new Set<() => void>();
   private queue: Promise<void> = Promise.resolve();
@@ -68,6 +69,7 @@ export class Journal {
     this.emit({ localError: null });
     for (const draft of Object.values(this.state.drafts)) this.persist(() => this.db.draft(draft));
     if (this.state.plan) { const plan = this.state.plan; this.persist(() => this.db.plan(plan)); }
+    for (const [exercise_id, blob] of Object.entries(this.state.photos)) this.persist(() => this.db.photo({ exercise_id, blob }));
     this.persist(() => this.db.documents(Object.values(this.state.documents)));
     await this.flush();
   }
@@ -77,8 +79,9 @@ export class Journal {
       const plan = cached.plan ? normalizePlan(cached.plan) : null;
       const drafts = cached.drafts.map(normalizeDraft);
       const documents = cached.documents.map(normalizeWorkout);
+      const photos = Object.fromEntries(cached.photos.map(photo => [photo.exercise_id, photo.blob]));
       this.emit({ plan, drafts: Object.fromEntries(drafts.map(d => [d.date, d])),
-        documents: Object.fromEntries(documents.map(d => [d.date, d])), ready: true });
+        documents: Object.fromEntries(documents.map(d => [d.date, d])), photos, ready: true });
     } catch {
       this.emit({ ready: true, localError: 'Pamięć telefonu jest niedostępna. Nie zamykaj aplikacji przed zapisaniem danych na serwerze lub pobraniem kopii.' });
     }
@@ -148,6 +151,15 @@ export class Journal {
     draft.generation += 1; draft.dirty = true;
     this.setDraft(draft);
     this.emit({ message: null });
+  }
+  setPhoto(exerciseId: string, blob: Blob) {
+    this.emit({ photos: { ...this.state.photos, [exerciseId]: blob }, localError: null });
+    this.persist(() => this.db.photo({ exercise_id: exerciseId, blob }));
+  }
+  removePhoto(exerciseId: string) {
+    const { [exerciseId]: _photo, ...photos } = this.state.photos;
+    this.emit({ photos });
+    this.persist(() => this.db.deletePhoto(exerciseId));
   }
   clearMessage = () => this.emit({ message: null });
   cancelConflict = () => this.emit({ conflict: null });

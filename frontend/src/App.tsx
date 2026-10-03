@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { ArrowLeft, ChevronRight, Dumbbell, History, ChartNoAxesCombined, RefreshCw, Plus, Minus, Check, WifiOff, Download, Timer, Info, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Dumbbell, History, ChartNoAxesCombined, RefreshCw, Plus, Minus, Check, WifiOff, Download, Timer, Info, Trash2, ImagePlus } from 'lucide-react';
 import { api } from './api';
 import { formatDay, isDay, parseInput, parseRest, progress, shiftDay, today } from './domain';
 import type { Journal } from './journal';
@@ -27,6 +27,35 @@ function summary(exercise: InputExercise) {
   const amounts = [...new Set(rows)];
   const rest = exercise.rest_seconds === '' ? '' : ` · ${exercise.rest_seconds} s`;
   return `${rows.length} ${rows.length === 1 ? 'seria' : rows.length < 5 ? 'serie' : 'serii'} · ${amounts.length === 1 ? amounts[0] : rows.slice(0, 3).join(' / ') + (rows.length > 3 ? ` / +${rows.length - 3}` : '')}${rest}`;
+}
+function usePhotoUrl(blob: Blob | undefined) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!blob) { setUrl(null); return; }
+    const next = URL.createObjectURL(blob);
+    setUrl(next);
+    return () => URL.revokeObjectURL(next);
+  }, [blob]);
+  return url;
+}
+async function preparePhoto(file: File): Promise<Blob> {
+  const source = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = source;
+    await image.decode();
+    const longest = Math.max(image.naturalWidth, image.naturalHeight);
+    const scale = Math.min(1, 1200 / longest);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob ?? file), 'image/jpeg', 0.84));
+  } catch {
+    return file;
+  } finally {
+    URL.revokeObjectURL(source);
+  }
 }
 
 export function App({ journal, updateAvailable, applyUpdate }: {
@@ -90,10 +119,9 @@ export function App({ journal, updateAvailable, applyUpdate }: {
       {!state.ready && <p className="empty" role="status">Otwieranie dziennika…</p>}
       {state.ready && route.page === 'plans' && <PlansView ready={!!state.plan} plan={state.plan} documents={state.documents} onSelect={planId => navigate(`workout/${planId}/${today()}`)} />}
       {draft && route.page === 'workout' && (detail
-        ? <ExerciseEditor key={route.exercise} draft={draft} index={exerciseIndex} journal={journal} />
-        : <div className="exercise-list">{draft.exercises.map((exercise, i) => <button key={exercise.exercise_id} className="exercise-card" onClick={() => navigate(`workout/${route.planId}/${route.day}/${exercise.exercise_id}`)}>
-          <span className="exercise-number">{String(i + 1).padStart(2, '0')}</span><span className="exercise-description"><strong>{exercise.name}</strong><span>{summary(exercise)}</span></span><ChevronRight size={18} aria-hidden="true" />
-        </button>)}</div>)}
+        ? <ExerciseEditor key={route.exercise} draft={draft} index={exerciseIndex} journal={journal} photo={state.photos[draft.exercises[exerciseIndex].exercise_id]} />
+        : <div className="exercise-list">{draft.exercises.map((exercise, i) => <ExerciseCard key={exercise.exercise_id} exercise={exercise} number={i} photo={state.photos[exercise.exercise_id]}
+          onClick={() => navigate(`workout/${route.planId}/${route.day}/${exercise.exercise_id}`)} />)}</div>)}
       {state.ready && route.page === 'history' && <HistoryView journal={journal} planId={route.planId} onExport={exportAll} />}
       {state.ready && route.page === 'progress' && (route.progressPlan ? <ProgressView journal={journal} planId={route.progressPlan} /> : <ProgressPlansView />)}
     </main>
@@ -113,6 +141,16 @@ export function App({ journal, updateAvailable, applyUpdate }: {
   </div>;
 }
 
+function ExerciseCard({ exercise, number, photo, onClick }: {
+  exercise: InputExercise; number: number; photo?: Blob; onClick: () => void;
+}) {
+  const photoUrl = usePhotoUrl(photo);
+  return <button className="exercise-card" onClick={onClick}>
+    {photoUrl ? <img className="exercise-thumbnail" src={photoUrl} alt="" aria-hidden="true" />
+      : <span className="exercise-number">{String(number + 1).padStart(2, '0')}</span>}
+    <span className="exercise-description"><strong>{exercise.name}</strong><span>{summary(exercise)}</span></span><ChevronRight size={18} aria-hidden="true" />
+  </button>;
+}
 function PlansView({ ready, plan, documents, onSelect }: {
   ready: boolean; plan: Plan | null; documents: Record<string, Workout>; onSelect: (planId: string) => void;
 }) {
@@ -149,10 +187,13 @@ function PlansView({ ready, plan, documents, onSelect }: {
   </section>;
 }
 
-function ExerciseEditor({ draft, index, journal }: { draft: Draft; index: number; journal: Journal }) {
+function ExerciseEditor({ draft, index, journal, photo }: { draft: Draft; index: number; journal: Journal; photo?: Blob }) {
   const exercise = draft.exercises[index];
-  const [instructionsOpen, setInstructionsOpen] = useState(exercise.instructions !== '');
+  const [instructionsOpen, setInstructionsOpen] = useState(exercise.instructions !== '' || !!photo);
   const [restOpen, setRestOpen] = useState(exercise.rest_seconds !== '');
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const photoInput = useRef<HTMLInputElement>(null);
+  const photoUrl = usePhotoUrl(photo);
   const instructions = exercise.instructions ?? '';
   const rest = exercise.rest_seconds ?? '';
   const edit = (transform: (value: InputExercise) => void) => journal.edit(draft.date, d => transform(d.exercises[index]));
@@ -160,7 +201,7 @@ function ExerciseEditor({ draft, index, journal }: { draft: Draft; index: number
   try { parseRest(rest); } catch (error) { restError = (error as Error).message; }
   return <section className="editor" aria-label={`Serie: ${exercise.name}`}>
     <div className="editor-tools">
-      <button type="button" className={`icon-button instruction-toggle ${instructions ? 'active' : ''}`} aria-label="Pokaż instrukcję ćwiczenia"
+      <button type="button" className={`icon-button instruction-toggle ${instructions || photo ? 'active' : ''}`} aria-label="Pokaż instrukcję ćwiczenia"
         title="Instrukcja ćwiczenia" aria-expanded={instructionsOpen} onClick={() => setInstructionsOpen(open => !open)}><Info size={19} /></button>
       <div className="rest-row">
         <button type="button" className={`icon-button rest-toggle ${rest ? 'active' : ''}`} aria-label="Ustaw przerwę między seriami"
@@ -179,6 +220,25 @@ function ExerciseEditor({ draft, index, journal }: { draft: Draft; index: number
       <textarea id="exercise-instructions" rows={4} maxLength={2000} value={instructions}
         placeholder="Dodaj sposób wykonania ćwiczenia…" onChange={event => edit(e => { e.instructions = event.target.value; })} />
       <span className="instruction-count">{instructions.length}/2000</span>
+      <div className="photo-section">
+        {photoUrl ? <img className="photo-preview" src={photoUrl} alt={`Podgląd zdjęcia ćwiczenia ${exercise.name}`} />
+          : <div className="photo-preview photo-placeholder">Brak zdjęcia</div>}
+        <div className="photo-actions">
+          <label className={`text-button photo-picker ${photoBusy ? 'disabled' : ''}`}>
+            <ImagePlus size={17} /> {photo ? 'Zmień zdjęcie' : 'Dodaj zdjęcie'}
+            <input ref={photoInput} type="file" accept="image/*" disabled={photoBusy} onChange={async event => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (!file) return;
+              setPhotoBusy(true);
+              try { journal.setPhoto(exercise.exercise_id, await preparePhoto(file)); }
+              finally { setPhotoBusy(false); }
+            }} />
+          </label>
+          {photo && <button type="button" className="text-button" onClick={() => journal.removePhoto(exercise.exercise_id)}><Trash2 size={17} /> Usuń zdjęcie</button>}
+        </div>
+        <span className="photo-hint">Zdjęcie zostanie zapisane na tym telefonie.</span>
+      </div>
     </div>}
     <div className="set-head"><span>Seria</span><span>{exercise.unit === 'kg' ? 'Ciężar · kg' : 'Czas · sec'}</span><span>Powtórzenia</span></div>
     {exercise.sets.map((set, i) => <div className="set-row" key={i}><span className="set-number">Seria {i + 1}</span>

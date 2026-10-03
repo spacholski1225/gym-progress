@@ -55,6 +55,8 @@ Konfiguracja certyfikatu i reverse proxy wymaga docelowego adresu serwera — ni
   Można dodawać/usuwać serie. Usunięcie wypełnionej serii wymaga potwierdzenia.
   Zmiana jednostki czyści wartości ciężaru/czasu po potwierdzeniu, bez ich przeliczania.
 - **Zapis lokalny:** każda zmiana trafia do IndexedDB, również niepełny tekst w polu.
+  Zdjęcia ćwiczeń wybrane z biblioteki telefonu są pomniejszane, przechowywane lokalnie
+  na tym urządzeniu i używane jako miniatury na liście ćwiczeń; nie są wysyłane na serwer.
   Zakończony zapis potwierdza komunikat na dole. Błąd pamięci pokazuje ostrzeżenie i umożliwia
   pobranie kopii. Nowa wersja aplikacji nie przeładowuje formularza automatycznie.
 - **Synchronizacja:** tylko przyciskiem, także dla niepełnego treningu. Powrót połączenia
@@ -130,9 +132,11 @@ Plan definiuje również `rest_seconds` — domyślną przerwę między seriami 
 Wartość `null` oznacza pustą, nieustawioną przerwę. Nowy trening kopiuje tę wartość z planu,
 a jej zmiana na ekranie ćwiczenia jest zapisywana w konkretnym treningu.
 
-Każde ćwiczenie ma również opcjonalne `instructions` z instrukcją wykonania.
-Domyślnie jest `null`, a w formularzu puste pole. Instrukcja zapisana w treningu
-jest kopiowana do kolejnego nowego treningu tego samego planu razem z seriami.
+Każde ćwiczenie ma również opcjonalne `instructions` z instrukcją wykonania oraz zdjęcie.
+Instrukcję wpisuje się po otwarciu ikony informacji. W tym samym miejscu przycisk „Dodaj zdjęcie”
+otwiera bibliotekę zdjęć na iPhonie; po wybraniu zdjęcie pojawia się jako podgląd i miniatura.
+Instrukcja zapisana w treningu jest kopiowana do kolejnego nowego treningu tego samego planu
+wraz z seriami. Zdjęcie pozostaje ustawieniem lokalnym telefonu.
 
 Seria zawsze ma oba klucze:
 
