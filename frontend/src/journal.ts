@@ -1,16 +1,22 @@
 import { api, ApiError } from './api';
 import { fromWorkout, newDraft, toRequest, today } from './domain';
 import type { Storage } from './db';
-import type { Draft, Plan, Workout } from './types';
+import type { DeleteResult, Draft, Plan, Workout } from './types';
 
 function normalizePlan(plan: Plan): Plan {
-  return { ...plan, exercises: plan.exercises.map(exercise => ({ ...exercise, rest_seconds: exercise.rest_seconds ?? null })) };
+  return { ...plan, exercises: plan.exercises.map(exercise => ({
+    ...exercise, rest_seconds: exercise.rest_seconds ?? null, instructions: exercise.instructions ?? null,
+  })) };
 }
 function normalizeWorkout(workout: Workout): Workout {
-  return { ...workout, exercises: workout.exercises.map(exercise => ({ ...exercise, rest_seconds: exercise.rest_seconds ?? null })) };
+  return { ...workout, exercises: workout.exercises.map(exercise => ({
+    ...exercise, rest_seconds: exercise.rest_seconds ?? null, instructions: exercise.instructions ?? null,
+  })) };
 }
 function normalizeDraft(draft: Draft): Draft {
-  return { ...draft, exercises: draft.exercises.map(exercise => ({ ...exercise, rest_seconds: exercise.rest_seconds ?? '' })) };
+  return { ...draft, exercises: draft.exercises.map(exercise => ({
+    ...exercise, rest_seconds: exercise.rest_seconds ?? '', instructions: exercise.instructions ?? '',
+  })) };
 }
 
 type State = {
@@ -35,13 +41,15 @@ function workoutMatchesPlan(workout: Workout, plan: Plan): boolean {
 function draftHasInput(draft: Draft): boolean {
   return draft.exercises.some(exercise => exercise.sets.some(set => set.value !== '' || set.reps !== ''));
 }
+
+type Remote = Omit<typeof api, 'delete'> & { delete?: typeof api.delete };
 export class Journal {
   state: State = { ready: false, plan: null, drafts: {}, documents: {}, connection: 'checking',
     pendingWrites: 0, localError: null, message: null, syncing: [], conflict: null };
   private listeners = new Set<() => void>();
   private queue: Promise<void> = Promise.resolve();
   private refreshing = false;
-  constructor(private db: Storage, private remote = api) {}
+  constructor(private db: Storage, private remote: Remote = api) {}
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   snapshot = () => this.state;
   private emit(patch: Partial<State>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(fn => fn()); }
@@ -91,15 +99,10 @@ export class Journal {
     try {
       const planId = this.state.plan?.plan_id ?? 'A';
       const [plan, documents] = await Promise.all([this.remote.plan(planId), this.remote.list()]);
-      const merged = { ...this.state.documents };
-      for (const document of documents) {
-        if (!merged[document.date] || merged[document.date].updated_at <= document.updated_at) {
-          merged[document.date] = document;
-        }
-      }
+      const merged = Object.fromEntries(documents.map(document => [document.date, document]));
       this.emit({ plan, documents: merged, connection: 'available' });
       this.persist(() => this.db.plan(plan));
-      this.persist(() => this.db.documents(Object.values(merged)));
+      this.persist(() => this.db.replaceDocuments(Object.values(merged)));
       for (const draft of Object.values(this.state.drafts)) {
         const document = merged[draft.date];
         if (!draftMatchesPlan(draft, plan)) {
@@ -162,6 +165,45 @@ export class Journal {
     this.setDraft({ ...this.state.drafts[conflict.day], baseRevision: conflict.server.revision });
     this.emit({ conflict: null });
     await this.sync(conflict.day);
+  }
+  private removeLocal(day: string) {
+    const { [day]: _draft, ...drafts } = this.state.drafts;
+    const { [day]: _document, ...documents } = this.state.documents;
+    this.emit({ drafts, documents });
+    this.persist(() => this.db.deleteDraft(day));
+    this.persist(() => this.db.deleteDocument(day));
+  }
+  async delete(day: string) {
+    const document = this.state.documents[day];
+    if (!document) {
+      if (!this.state.drafts[day]) return;
+      this.removeLocal(day);
+      await this.flush();
+      return;
+    }
+    if (!this.remote.delete) {
+      this.emit({ message: 'Usuwanie treningu nie jest dostępne. Odśwież aplikację i spróbuj ponownie.' });
+      return;
+    }
+    this.emit({ syncing: [...this.state.syncing, day], message: null });
+    try {
+      const response: DeleteResult = await this.remote.delete(day, document.revision);
+      this.removeLocal(day);
+      this.emit({ connection: 'available',
+        message: response.git.status === 'failed'
+          ? 'Trening usunięto, ale zapis historii zmian nie powiódł się.' : null });
+      await this.flush();
+    } catch (error) {
+      const apiError = error instanceof ApiError;
+      this.emit({ connection: apiError ? 'available' : 'offline',
+        message: apiError && error.status === 409
+          ? 'Nie można usunąć treningu: na serwerze jest nowsza wersja. Odśwież historię i spróbuj ponownie.'
+          : apiError && error.status === 404
+            ? 'Tego treningu nie ma już na serwerze. Odśwież historię i spróbuj ponownie.'
+            : apiError ? error.message : 'Nie udało się usunąć treningu. Sprawdź VPN i spróbuj ponownie.' });
+    } finally {
+      this.emit({ syncing: this.state.syncing.filter(current => current !== day) });
+    }
   }
   async sync(day: string) {
     if (this.state.syncing.includes(day)) return;

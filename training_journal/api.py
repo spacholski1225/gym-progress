@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import Settings
-from .models import ISODate, Plan, ProgressPoint, ProgressSeries, SyncResult, WorkoutDocument, WorkoutWrite
+from .models import DeleteResult, ISODate, Plan, ProgressPoint, ProgressSeries, Revision, SyncResult, WorkoutDocument, WorkoutWrite
 from .storage import RevisionConflict, StorageError, WorkoutStore
 
 logger = logging.getLogger(__name__)
@@ -71,6 +71,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if workout is None:
             raise HTTPException(404, "Workout not found")
         return workout
+
+    @app.delete("/api/workouts/{date}", response_model=DeleteResult, responses={
+        404: {"description": "Workout not found."},
+        409: {"description": "Revision conflict; fetch the current document before deleting."},
+        503: {"description": "Storage unavailable; safely retry the same request."},
+    })
+    def delete_workout(date: ISODate, expected_revision: Revision | None = Query(None)):
+        try:
+            result = store.delete(date, expected_revision)
+        except RevisionConflict as exc:
+            raise HTTPException(409, detail={"code": "revision_conflict", "current_revision": exc.current_revision}) from exc
+        if result is None:
+            raise HTTPException(404, "Workout not found")
+        return result
 
     @app.put("/api/workouts/{date}", response_model=SyncResult, responses={
         409: {"description": "Revision conflict; fetch the current document before editing."},

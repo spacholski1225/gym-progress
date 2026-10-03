@@ -37,6 +37,7 @@ class ExerciseDefinition(Model):
     name: Annotated[str, Field(min_length=1, max_length=200)]
     unit: Unit
     rest_seconds: NonnegativeInteger | None = None
+    instructions: Annotated[str, Field(max_length=2000)] | None = None
 
 class Exercise(ExerciseDefinition):
     sets: Annotated[list[WorkoutSet], Field(min_length=1)]
@@ -93,6 +94,11 @@ class SyncResult(Model):
     workout: WorkoutDocument
     git: GitResult
 
+
+class DeleteResult(Model):
+    deleted: Literal[True] = True
+    date: ISODate
+    git: GitResult
 
 class ProgressPoint(Model):
     date: ISODate

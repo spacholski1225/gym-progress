@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { ArrowLeft, ChevronRight, Dumbbell, History, ChartNoAxesCombined, RefreshCw, Plus, Minus, Check, WifiOff, Download, Timer } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Dumbbell, History, ChartNoAxesCombined, RefreshCw, Plus, Minus, Check, WifiOff, Download, Timer, Info, Trash2 } from 'lucide-react';
 import { api } from './api';
 import { formatDay, isDay, parseInput, parseRest, progress, shiftDay, today } from './domain';
 import type { Journal } from './journal';
@@ -151,23 +151,35 @@ function PlansView({ ready, plan, documents, onSelect }: {
 
 function ExerciseEditor({ draft, index, journal }: { draft: Draft; index: number; journal: Journal }) {
   const exercise = draft.exercises[index];
+  const [instructionsOpen, setInstructionsOpen] = useState(exercise.instructions !== '');
   const [restOpen, setRestOpen] = useState(exercise.rest_seconds !== '');
+  const instructions = exercise.instructions ?? '';
   const rest = exercise.rest_seconds ?? '';
   const edit = (transform: (value: InputExercise) => void) => journal.edit(draft.date, d => transform(d.exercises[index]));
   let restError = '';
   try { parseRest(rest); } catch (error) { restError = (error as Error).message; }
   return <section className="editor" aria-label={`Serie: ${exercise.name}`}>
-    <div className="rest-row">
-      <button type="button" className={`icon-button rest-toggle ${rest ? 'active' : ''}`} aria-label="Ustaw przerwę między seriami"
-        title="Przerwa między seriami" aria-expanded={restOpen} onClick={() => setRestOpen(open => !open)}><Timer size={19} /></button>
-      {restOpen && <div className="rest-input-wrap">
-        <input id="rest-seconds" type="text" inputMode="numeric" autoComplete="off" aria-label="Przerwa między seriami w sekundach"
-          aria-invalid={!!restError} aria-describedby={restError ? 'rest-seconds-error' : undefined} value={rest} placeholder="—"
-          onFocus={event => event.target.select()} onChange={event => edit(e => { e.rest_seconds = event.target.value; })} />
-        <span aria-hidden="true">sec</span>
-        {restError && <span className="input-error" id="rest-seconds-error">{restError}</span>}
-      </div>}
+    <div className="editor-tools">
+      <button type="button" className={`icon-button instruction-toggle ${instructions ? 'active' : ''}`} aria-label="Pokaż instrukcję ćwiczenia"
+        title="Instrukcja ćwiczenia" aria-expanded={instructionsOpen} onClick={() => setInstructionsOpen(open => !open)}><Info size={19} /></button>
+      <div className="rest-row">
+        <button type="button" className={`icon-button rest-toggle ${rest ? 'active' : ''}`} aria-label="Ustaw przerwę między seriami"
+          title="Przerwa między seriami" aria-expanded={restOpen} onClick={() => setRestOpen(open => !open)}><Timer size={19} /></button>
+        {restOpen && <div className="rest-input-wrap">
+          <input id="rest-seconds" type="text" inputMode="numeric" autoComplete="off" aria-label="Przerwa między seriami w sekundach"
+            aria-invalid={!!restError} aria-describedby={restError ? 'rest-seconds-error' : undefined} value={rest} placeholder="—"
+            onFocus={event => event.target.select()} onChange={event => edit(e => { e.rest_seconds = event.target.value; })} />
+          <span aria-hidden="true">sec</span>
+          {restError && <span className="input-error" id="rest-seconds-error">{restError}</span>}
+        </div>}
+      </div>
     </div>
+    {instructionsOpen && <div className="instruction-panel">
+      <label htmlFor="exercise-instructions">Instrukcja wykonania</label>
+      <textarea id="exercise-instructions" rows={4} maxLength={2000} value={instructions}
+        placeholder="Dodaj sposób wykonania ćwiczenia…" onChange={event => edit(e => { e.instructions = event.target.value; })} />
+      <span className="instruction-count">{instructions.length}/2000</span>
+    </div>}
     <div className="set-head"><span>Seria</span><span>{exercise.unit === 'kg' ? 'Ciężar · kg' : 'Czas · sec'}</span><span>Powtórzenia</span></div>
     {exercise.sets.map((set, i) => <div className="set-row" key={i}><span className="set-number">Seria {i + 1}</span>
       {(['value', 'reps'] as const).map(field => {
@@ -193,12 +205,36 @@ function ExerciseEditor({ draft, index, journal }: { draft: Draft; index: number
 
 function HistoryView({ journal, planId, onExport }: { journal: Journal; planId: string; onExport: () => void }) {
   const state = useSyncExternalStore(journal.subscribe, journal.snapshot);
-  const dates = [...new Set([...Object.keys(state.documents), ...Object.keys(state.drafts)])].sort().reverse();
+  const localDates = Object.values(state.drafts)
+    .filter(draft => draft.gitPending || draft.exercises.some(exercise => {
+      const definition = state.plan?.exercises.find(item => item.exercise_id === exercise.exercise_id);
+      const defaultRest = definition?.rest_seconds == null ? '' : String(definition.rest_seconds);
+      return exercise.instructions.trim() !== '' || exercise.rest_seconds !== defaultRest ||
+        exercise.sets.some(set => set.value !== '' || set.reps !== '');
+    }))
+    .map(draft => draft.date);
+  const dates = [...new Set([...Object.keys(state.documents), ...localDates])].sort().reverse();
+  const remove = (day: string) => {
+    const draft = state.drafts[day];
+    const hasUnsynced = !!draft?.dirty || !!draft?.gitPending;
+    const location = state.documents[day] ? 'z serwera i telefonu' : 'z telefonu';
+    const warning = hasUnsynced
+      ? `Ten trening ma niezsynchronizowane zmiany, które zostaną bezpowrotnie usunięte ${location}. Kontynuować?`
+      : `Czy na pewno usunąć ten trening ${location}?`;
+    if (window.confirm(warning)) void journal.delete(day);
+  };
   return <section aria-label="Zapisane treningi">
     {!dates.length && <p className="empty">Tutaj pojawią się Twoje treningi i lokalne wersje robocze.</p>}
     <div className="history-list">{dates.map(day => {
       const draft = state.drafts[day];
-      return <button className="history-card" key={day} onClick={() => navigate(`workout/${planId}/${day}`)}><span><strong>{formatDay(day)}</strong><small>{draft?.dirty ? 'Zmiany tylko na telefonie' : draft?.gitPending ? 'Na serwerze · ponów historię zmian' : 'Zapisany na serwerze'}</small></span><ChevronRight size={18} /></button>;
+      return <div className="history-card" key={day}>
+        <button className="history-main" onClick={() => navigate(`workout/${planId}/${day}`)}>
+          <span><strong>{formatDay(day)}</strong><small>{draft?.dirty ? 'Zmiany tylko na telefonie' : draft?.gitPending ? 'Na serwerze · ponów historię zmian' : 'Zapisany na serwerze'}</small></span>
+          <ChevronRight size={18} />
+        </button>
+        <button type="button" className="icon-button history-delete" aria-label={`Usuń trening ${formatDay(day)}`} title="Usuń trening"
+          disabled={state.syncing.includes(day)} onClick={event => { event.stopPropagation(); remove(day); }}><Trash2 size={18} /></button>
+      </div>;
     })}</div>
     <button className="text-button export" onClick={onExport}><Download size={17} /> Pobierz kopię danych z telefonu</button>
     <p className="muted footnote">Historia obejmuje zapisane treningi i wersje robocze dostępne na tym urządzeniu.</p>
@@ -277,6 +313,6 @@ function Conflict({ journal }: { journal: Journal }) {
     <button className="text-button" onClick={() => download(state.drafts[conflict.day], `trening-lokalny-${conflict.day}.json`)}><Download size={17} /> Pobierz lokalną wersję</button>
     <div className="conflict-actions"><button className="primary" onClick={() => void journal.keepLocal()}>Zapisz moją wersję na serwerze</button>
       <button className="secondary" onClick={() => { if (window.confirm('Zastąpić lokalne zmiany wersją z serwera? Możesz wcześniej pobrać lokalną kopię.')) void journal.useServer(); }}>Wczytaj wersję serwera</button>
-      <button className="text-button" onClick={journal.cancelConflict}>Rozstrzygnę później</button></div>
+      <button className="text-button" onClick={journal.cancelConflict}>Anuluj</button></div>
   </dialog>;
 }

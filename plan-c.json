@@ -1,0 +1,16 @@
+{
+  "plan_id": "C",
+  "schema_version": 1,
+  "default_sets": 3,
+  "exercises": [
+    {"exercise_id": "decline_barbell_press", "name": "Wyciskanie sztangi skos ujemny — klatka", "unit": "kg", "rest_seconds": 60, "instructions": null},
+    {"exercise_id": "large_hammer_machine_press", "name": "Maszyna duży Hammer — klatka", "unit": "kg", "rest_seconds": 60, "instructions": null},
+    {"exercise_id": "joined_dumbbells_incline_press", "name": "Hantelki złączone skos dodatni — klatka", "unit": "kg", "rest_seconds": 60, "instructions": null},
+    {"exercise_id": "machine_lateral_raise", "name": "Wznosy bokiem na maszynie — barki", "unit": "kg", "rest_seconds": 60, "instructions": null},
+    {"exercise_id": "kneeling_face_pull", "name": "Face pull klęcząc — barki", "unit": "kg", "rest_seconds": 60, "instructions": null},
+    {"exercise_id": "seated_front_machine_press", "name": "Maszyna siedząc przodem — barki", "unit": "kg", "rest_seconds": 60, "instructions": null},
+    {"exercise_id": "ez_bar_curl", "name": "Biceps sztangą łamaną — biceps", "unit": "kg", "rest_seconds": 60, "instructions": null},
+    {"exercise_id": "french_press", "name": "Wyciskanie francuskie — triceps", "unit": "kg", "rest_seconds": 60, "instructions": null},
+    {"exercise_id": "seated_leg_curl", "name": "Maszyna siedząc na dwójki — nogi", "unit": "kg", "rest_seconds": 60, "instructions": null}
+  ]
+}

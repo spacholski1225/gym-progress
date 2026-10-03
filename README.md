@@ -61,8 +61,10 @@ Konfiguracja certyfikatu i reverse proxy wymaga docelowego adresu serwera — ni
   może odświeżyć odczyty, ale nigdy automatycznie nie wysyła formularza.
   Zmiany zrobione podczas synchronizacji pozostają lokalne i wymagają kolejnego kliknięcia.
   Przy konflikcie można pobrać lokalną kopię, wybrać własną wersję lub wersję serwera.
-- **Historia:** treningi zapisane na serwerze i lokalne szkice. Wybranie daty pozwala
-  edytować ten dzień bez tworzenia nowego treningu. Dostępny jest eksport lokalnej kopii JSON.
+- **Historia:** treningi zapisane na serwerze i lokalne szkice zawierające zmiany. Puste,
+  nowo utworzone szkice nie są pokazywane; po udanym odświeżeniu lista lokalnych dokumentów
+  odpowiada serwerowi. Wybranie daty pozwala edytować ten dzień bez tworzenia nowego treningu.
+  Dostępny jest eksport lokalnej kopii JSON.
 - **Postępy:** sześć wykresów, 30/90 dni, maksymalny ciężar lub czas danej sesji.
   Wykresy obejmują wyłącznie zapisane wersje serwerowe, również odczytane z pamięci offline.
   Punkt można dotknąć; pod wykresem jest dostępna również lista wartości.
@@ -119,13 +121,18 @@ Nie uruchamiają one zapisów w prawdziwym `data/`: każdy test ma osobne tymcza
 
 ## Plan i model
 
-`plan.json` zawiera Plan A ukierunkowany na nogi, a `plan-b.json` zawiera Plan B
-ukierunkowany na klatkę, barki, plecy i nogi. Oba plany mają domyślnie trzy serie;
+`plan.json` zawiera Plan A ukierunkowany na nogi, `plan-b.json` zawiera Plan B
+ukierunkowany na klatkę, barki, plecy i nogi, a `plan-c.json` zawiera Plan C
+ukierunkowany na klatkę, barki, ramiona i dwójki. Wszystkie plany mają domyślnie trzy serie;
 konkretny trening może zmienić liczbę serii (minimum jedna) i jednostkę ćwiczenia.
 
 Plan definiuje również `rest_seconds` — domyślną przerwę między seriami ćwiczenia w sekundach.
 Wartość `null` oznacza pustą, nieustawioną przerwę. Nowy trening kopiuje tę wartość z planu,
 a jej zmiana na ekranie ćwiczenia jest zapisywana w konkretnym treningu.
+
+Każde ćwiczenie ma również opcjonalne `instructions` z instrukcją wykonania.
+Domyślnie jest `null`, a w formularzu puste pole. Instrukcja zapisana w treningu
+jest kopiowana do kolejnego nowego treningu tego samego planu razem z seriami.
 
 Seria zawsze ma oba klucze:
 
@@ -149,10 +156,11 @@ API nie przepisuje ani nie uzupełnia wcześniejszych dokumentów bieżącym pla
 
 | Metoda i ścieżka | Działanie |
 | --- | --- |
-| `GET /api/plan?id=A|B` | Wybrany plan, jednostki i domyślna liczba serii |
+| `GET /api/plan?id=A|B|C` | Wybrany plan, jednostki i domyślna liczba serii |
 | `GET /api/workouts?from=2026-09-01&to=2026-09-30` | Pełne dokumenty, rosnąco według daty |
 | `GET /api/workouts/2026-09-22` | Jeden dokument z rewizją; `404`, jeśli nie istnieje |
 | `PUT /api/workouts/2026-09-22` | Zapis całego dokumentu; `200` z wynikiem zapisu i Git |
+| `DELETE /api/workouts/2026-09-22?expected_revision=...` | Usunięcie treningu z pliku danych i historii Git |
 | `GET /api/progress?from=2026-08-24&to=2026-09-22` | Maksymalne wartości ćwiczeń w kolejnych treningach |
 
 Parametry `from` i `to` są wymagane, obie granice włączne. Niepoprawny zakres daje `422`.
@@ -276,6 +284,7 @@ Wykres planka pokazuje najdłuższy czas serii, bez przeliczania przez liczbę p
 ```text
 plan.json                # Plan A, śledzony przez Git
 plan-b.json              # Plan B, śledzony przez Git
+plan-c.json              # Plan C, śledzony przez Git
 training_journal/        # Backend
 tests/                   # Testy API i realnych operacji Git
 deploy/                  # Przykładowa usługa systemd

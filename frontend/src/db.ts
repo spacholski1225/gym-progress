@@ -21,9 +21,16 @@ export function storage(name = 'training-journal-v1') {
       return { drafts, documents, plan: plan ?? null };
     },
     async draft(value: Draft) { await (await database).put('drafts', value); },
+    async deleteDraft(date: string) { await (await database).delete('drafts', date); },
+    async deleteDocument(date: string) { await (await database).delete('documents', date); },
     async plan(value: Plan) { await (await database).put('settings', value, 'plan'); },
     async documents(values: Workout[]) {
       const tx = (await database).transaction('documents', 'readwrite');
+      await Promise.all([...values.map(value => tx.store.put(value)), tx.done]);
+    },
+    async replaceDocuments(values: Workout[]) {
+      const tx = (await database).transaction('documents', 'readwrite');
+      await tx.store.clear();
       await Promise.all([...values.map(value => tx.store.put(value)), tx.done]);
     },
   };

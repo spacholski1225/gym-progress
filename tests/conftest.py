@@ -24,6 +24,7 @@ def environment(tmp_path):
     git(tmp_path, "init", "-b", "main")
     (tmp_path / "plan.json").write_text((PROJECT / "plan.json").read_text(), encoding="utf-8")
     (tmp_path / "plan-b.json").write_text((PROJECT / "plan-b.json").read_text(), encoding="utf-8")
+    (tmp_path / "plan-c.json").write_text((PROJECT / "plan-c.json").read_text(), encoding="utf-8")
     (tmp_path / ".gitignore").write_text(".runtime/\n")
     git(tmp_path, "add", ".")
     git(tmp_path, "commit", "-m", "Initial plan")

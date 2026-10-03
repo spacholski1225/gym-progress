@@ -12,7 +12,10 @@ function result(request: WorkoutWrite, git: 'committed' | 'failed' = 'committed'
 }
 const remote = () => ({ plan: vi.fn(async () => plan), list: vi.fn(async () => [document()]),
   get: vi.fn(async () => document('2026-09-22', 'c'.repeat(32))),
-  save: vi.fn(async (request: WorkoutWrite) => result(request)), progress: vi.fn(async () => []) });
+  save: vi.fn(async (request: WorkoutWrite) => result(request)),
+  delete: vi.fn(async (day: string) => ({ deleted: true as const, date: day,
+    git: { status: 'committed' as const, commit: null, error: null } })),
+  progress: vi.fn(async () => []) });
 
 describe('local storage and synchronization', () => {
   let db: ReturnType<typeof storage>;
@@ -70,6 +73,15 @@ describe('local storage and synchronization', () => {
     expect(server.save.mock.calls[1][0].expected_revision).toBe('c'.repeat(32));
     expect(journal.state.conflict).toBe(null);
   });
+  it('cancelling a conflict keeps the local draft and does not retry or overwrite the server', async () => {
+    server.save.mockRejectedValueOnce(new ApiError(409, 'conflict'));
+    await journal.sync('2026-09-22');
+    const localBefore = journal.state.drafts['2026-09-22'];
+    journal.cancelConflict();
+    expect(journal.state.conflict).toBe(null);
+    expect(journal.state.drafts['2026-09-22']).toEqual(localBefore);
+    expect(server.save).toHaveBeenCalledTimes(1);
+  });
   it('reports quota failures rather than claiming the data was saved locally', async () => {
     const put = vi.spyOn(db, 'draft').mockRejectedValue(new DOMException('Full', 'QuotaExceededError'));
     journal.edit('2026-09-22', d => { d.exercises[0].sets[0].value = '31'; });
@@ -80,6 +92,11 @@ describe('local storage and synchronization', () => {
     expect(journal.state.localError).toBe(null);
     expect((await db.load()).drafts.find(d => d.date === '2026-09-22')?.exercises[0].sets[0].value).toBe('31');
   });
+  it('drops cached server workouts missing from the authoritative refresh list', async () => {
+    server.list.mockResolvedValue([document('2026-09-22', 'e'.repeat(32))]);
+    await journal.refresh();
+    expect(Object.keys(journal.state.documents)).toEqual(['2026-09-22']);
+  });
   it('refreshes clean server versions without replacing unsynchronized edits', async () => {
     journal.ensure('2026-09-21');
     journal.edit('2026-09-22', d => { d.exercises[0].sets[0].value = '27'; });
@@ -87,5 +104,19 @@ describe('local storage and synchronization', () => {
     await journal.refresh();
     expect(journal.state.drafts['2026-09-21'].baseRevision).toBe('d'.repeat(32));
     expect(journal.state.drafts['2026-09-22'].exercises[0].sets[0].value).toBe('27');
+  });
+  it('deletes a local-only draft without contacting the server', async () => {
+    await journal.delete('2026-09-22');
+    await journal.flush();
+    expect(journal.state.drafts['2026-09-22']).toBeUndefined();
+    expect(server.delete).not.toHaveBeenCalled();
+    expect((await db.load()).drafts).toHaveLength(0);
+  });
+  it('deletes a saved workout from state and local storage', async () => {
+    await journal.delete('2026-09-21');
+    await journal.flush();
+    expect(server.delete).toHaveBeenCalledWith('2026-09-21', 'a'.repeat(32));
+    expect(journal.state.documents['2026-09-21']).toBeUndefined();
+    expect((await db.load()).documents).toHaveLength(0);
   });
 });

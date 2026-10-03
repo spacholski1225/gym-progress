@@ -13,8 +13,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from .config import Settings
-from .models import GitResult, SyncResult, WorkoutDocument, WorkoutWrite
+from .models import DeleteResult, GitResult, SyncResult, WorkoutDocument, WorkoutWrite
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +51,7 @@ class GitVersioner:
             raise GitFailure(result.stderr.strip() or result.stdout.strip() or "Git command failed")
         return result.stdout.strip()
 
-    def commit_workout(self, path: Path) -> GitResult:
+    def commit_workout(self, path: Path, message: str | None = None) -> GitResult:
         try:
             root = Path(self.run("rev-parse", "--show-toplevel")).resolve()
             if root != self.repo_dir:
@@ -67,7 +66,7 @@ class GitVersioner:
                 self.run("ls-files", "--error-unmatch", "--", relative)
                 return GitResult(status="unchanged", commit=self.run("rev-parse", "HEAD"))
             self.run("add", "--", relative)
-            self.run("commit", "--only", "-m", f"Save workout {path.stem}", "--", relative)
+            self.run("commit", "--only", "-m", message or f"Save workout {path.stem}", "--", relative)
             return GitResult(status="committed", commit=self.run("rev-parse", "HEAD"))
         except GitFailure as exc:
             logger.warning("Workout saved, but Git failed: %s", exc)
@@ -175,3 +174,15 @@ class WorkoutStore:
                 workout = existing
             git = self.versioner.commit_workout(self._path(request.date))
             return SyncResult(changed=not same, workout=workout, git=git)
+
+    def delete(self, day: date, expected_revision: str | None) -> DeleteResult | None:
+        with self.locked():
+            existing = self._read(day)
+            if existing is None:
+                return None
+            if existing.revision != expected_revision:
+                raise RevisionConflict(existing.revision)
+            path = self._path(day)
+            path.unlink()
+            git = self.versioner.commit_workout(path, f"Delete workout {day.isoformat()}")
+            return DeleteResult(date=day, git=git)

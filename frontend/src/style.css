@@ -253,6 +253,34 @@ main {
   padding:14px;
   min-height:74px;
 }
+.history-card {
+  padding:0;
+}
+.history-main {
+  display:flex;
+  flex:1;
+  align-items:center;
+  gap:12px;
+  width:auto;
+  min-width:0;
+  min-height:72px;
+  padding:14px;
+  border:0;
+  border-radius:15px;
+  background:transparent;
+  text-align:left;
+}
+.history-main>span {
+  flex:1;
+  min-width:0;
+}
+.history-main>svg {
+  color:var(--muted);
+}
+.history-delete {
+  flex:none;
+  margin-right:4px;
+}
 .exercise-number {
   width:20px;
   color:var(--muted);
@@ -355,6 +383,49 @@ main {
   background:var(--surface);
   border:1px solid var(--border);
   border-radius:16px;
+}
+.editor-tools {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  min-height:44px;
+}
+.instruction-toggle {
+  width:40px;
+  min-height:40px;
+  border:1px solid transparent;
+}
+.instruction-toggle.active {
+  color:var(--accent);
+  background:color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.instruction-panel {
+  display:grid;
+  gap:6px;
+  padding:0 0 12px;
+  margin-bottom:8px;
+  border-bottom:1px solid var(--border);
+}
+.instruction-panel label {
+  color:var(--muted);
+  font-size:13px;
+}
+.instruction-panel textarea {
+  width:100%;
+  min-height:100px;
+  resize:vertical;
+  padding:10px;
+  color:var(--text);
+  background:var(--input);
+  border:1px solid var(--border);
+  border-radius:10px;
+  font-size:15px;
+  line-height:1.45;
+}
+.instruction-count {
+  color:var(--muted);
+  font-size:11px;
+  text-align:right;
 }
 .rest-row {
   display:flex;

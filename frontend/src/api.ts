@@ -1,4 +1,4 @@
-import type { Plan, Series, SyncResult, Workout, WorkoutWrite } from './types';
+import type { DeleteResult, Plan, Series, SyncResult, Workout, WorkoutWrite } from './types';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -21,5 +21,7 @@ export const api = {
   list: () => request<Workout[]>('/workouts?from=0001-01-01&to=9999-12-31'),
   get: (day: string) => request<Workout>(`/workouts/${day}`),
   save: (data: WorkoutWrite) => request<SyncResult>(`/workouts/${data.date}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (day: string, expectedRevision: string) => request<DeleteResult>(
+    `/workouts/${day}?expected_revision=${encodeURIComponent(expectedRevision)}`, { method: 'DELETE' }),
   progress: (start: string, end: string) => request<Series[]>(`/progress?from=${start}&to=${end}`),
 };

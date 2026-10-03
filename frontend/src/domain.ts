@@ -47,6 +47,7 @@ export function fromWorkout(workout: Workout, generation = 0): Draft {
     date: workout.date, baseRevision: workout.revision, generation, dirty: false,
     gitPending: false, copiedFrom: null,
     exercises: workout.exercises.map(exercise => ({ ...exercise, rest_seconds: numberText(exercise.rest_seconds),
+      instructions: exercise.instructions ?? '',
       sets: exercise.sets.map(set => ({ value: numberText(set.value), reps: numberText(set.reps) })),
     })),
   };
@@ -63,18 +64,22 @@ export function newDraft(day: string, plan: Plan, documents: Workout[]): Draft {
     copiedFrom: previous?.date ?? null,
     exercises: plan.exercises.map(exercise => {
       const before = previous?.exercises.find(e => e.exercise_id === exercise.exercise_id && e.unit === exercise.unit);
-      return { ...exercise, rest_seconds: numberText(exercise.rest_seconds), sets: before
-        ? before.sets.map(set => ({ value: numberText(set.value), reps: numberText(set.reps) }))
-        : Array.from({ length: plan.default_sets }, () => ({ value: '', reps: '' })) };
+      return { ...exercise, rest_seconds: numberText(exercise.rest_seconds),
+        instructions: before?.instructions ?? exercise.instructions ?? '',
+        sets: before
+          ? before.sets.map(set => ({ value: numberText(set.value), reps: numberText(set.reps) }))
+          : Array.from({ length: plan.default_sets }, () => ({ value: '', reps: '' })) };
     }),
   };
 }
 export function toRequest(draft: Draft): WorkoutWrite {
   return { schema_version: 1, date: draft.date, expected_revision: draft.baseRevision,
-    exercises: draft.exercises.map(exercise => ({ ...exercise, rest_seconds: parseRest(exercise.rest_seconds), sets: exercise.sets.map((set, i) => {
-      try { return { value: parseInput(set.value, 'value'), reps: parseInput(set.reps, 'reps') }; }
-      catch (error) { throw new Error(`${exercise.name}, seria ${i + 1}: ${(error as Error).message}`); }
-    }) })),
+    exercises: draft.exercises.map(exercise => ({ ...exercise, rest_seconds: parseRest(exercise.rest_seconds),
+      instructions: exercise.instructions.trim() === '' ? null : exercise.instructions,
+      sets: exercise.sets.map((set, i) => {
+        try { return { value: parseInput(set.value, 'value'), reps: parseInput(set.reps, 'reps') }; }
+        catch (error) { throw new Error(`${exercise.name}, seria ${i + 1}: ${(error as Error).message}`); }
+      }) })),
   };
 }
 export function progress(documents: Workout[], start: string, end: string): Series[] {

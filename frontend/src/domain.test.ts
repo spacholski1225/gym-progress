@@ -21,6 +21,13 @@ describe('workout data', () => {
     draft.exercises[0].rest_seconds = '';
     expect(toRequest(draft).exercises[0].rest_seconds).toBe(null);
   });
+  it('copies exercise instructions into the next workout and keeps empty notes null', () => {
+    const previous = document();
+    previous.exercises[0].instructions = 'Łopatki stabilnie, ruch kontrolowany.';
+    const draft = newDraft('2026-09-22', plan, [previous]);
+    expect(draft.exercises[0].instructions).toBe('Łopatki stabilnie, ruch kontrolowany.');
+    expect(toRequest(draft).exercises[1].instructions).toBe(null);
+  });
   it('copies only the preceding saved workout, preserving order, nulls and series count', () => {
     const draft = newDraft('2026-09-22', plan, [document(), document('2026-09-23')]);
     expect(draft.copiedFrom).toBe('2026-09-21');

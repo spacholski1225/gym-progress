@@ -28,6 +28,12 @@ def test_plan_and_openapi(environment):
         "incline_dumbbell_press", "dumbbell_stretch", "cable_fly", "smith_machine_shoulder_press",
         "front_dumbbell_raise", "cable_lateral_raise", "seated_machine_row",
         "single_arm_seated_back_row", "smith_squat"]
+    plan_c = client.get("/api/plan?id=C").json()
+    assert plan_c["plan_id"] == "C"
+    assert [item["exercise_id"] for item in plan_c["exercises"]] == [
+        "decline_barbell_press", "large_hammer_machine_press", "joined_dumbbells_incline_press",
+        "machine_lateral_raise", "kneeling_face_pull", "seated_front_machine_press",
+        "ez_bar_curl", "french_press", "seated_leg_curl"]
     schema = client.get("/openapi.json").json()
     assert "put" in schema["paths"]["/api/workouts/{date}"]
     assert client.get("/docs").status_code == 200
@@ -52,6 +58,25 @@ def test_empty_workout_roundtrip_and_identical_retry(environment, payload):
     assert retry["changed"] is False
     assert retry["git"]["status"] == "unchanged"
     assert git(settings.repo_dir, "rev-parse", "HEAD") == head
+
+def test_instruction_roundtrip(environment, payload):
+    client, _, _ = environment
+    payload["exercises"][0]["instructions"] = "Łopatki stabilnie; opuszczaj ciężar kontrolowanie."
+    response = put(client, payload)
+    assert response.status_code == 200
+    assert response.json()["workout"]["exercises"][0]["instructions"] == payload["exercises"][0]["instructions"]
+
+
+def test_delete_workout_requires_current_revision(environment, payload):
+    client, _, settings = environment
+    workout = put(client, payload).json()["workout"]
+    stale = client.delete("/api/workouts/2026-09-22", params={"expected_revision": "0" * 32})
+    assert stale.status_code == 409
+    assert (settings.data_dir / "2026-09-22.json").exists()
+    deleted = client.delete("/api/workouts/2026-09-22", params={"expected_revision": workout["revision"]})
+    assert deleted.status_code == 200
+    assert deleted.json()["deleted"] is True
+    assert client.get("/api/workouts/2026-09-22").status_code == 404
 
 
 def test_edit_historical_workout_with_variable_sets(environment, payload):

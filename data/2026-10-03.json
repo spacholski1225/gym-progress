@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-03",
+  "exercises": [
+    {
+      "exercise_id": "decline_barbell_press",
+      "name": "Wyciskanie sztangi skos ujemny — klatka",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "sets": [
+        {"value": 40, "reps": 8},
+        {"value": 50, "reps": 8},
+        {"value": 50, "reps": 8},
+        {"value": 55, "reps": 8}
+      ]
+    },
+    {
+      "exercise_id": "large_hammer_machine_press",
+      "name": "Maszyna duży Hammer — klatka",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "sets": [
+        {"value": 10, "reps": 8},
+        {"value": 15, "reps": 8},
+        {"value": 20, "reps": 8},
+        {"value": 20, "reps": 8}
+      ]
+    },
+    {
+      "exercise_id": "joined_dumbbells_incline_press",
+      "name": "Hantelki złączone skos dodatni — klatka",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "sets": [
+        {"value": 8, "reps": 10},
+        {"value": 8, "reps": 10},
+        {"value": 8, "reps": 10}
+      ]
+    },
+    {
+      "exercise_id": "machine_lateral_raise",
+      "name": "Wznosy bokiem na maszynie — barki",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "sets": [
+        {"value": 5, "reps": 8},
+        {"value": 5, "reps": 8},
+        {"value": 5, "reps": 8}
+      ]
+    },
+    {
+      "exercise_id": "kneeling_face_pull",
+      "name": "Face pull klęcząc — barki",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "sets": [
+        {"value": 12.5, "reps": 10},
+        {"value": 12.5, "reps": 10},
+        {"value": 12.5, "reps": 10}
+      ]
+    },
+    {
+      "exercise_id": "seated_front_machine_press",
+      "name": "Maszyna siedząc przodem — barki",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "sets": [
+        {"value": 15, "reps": 8},
+        {"value": 15, "reps": 8},
+        {"value": 15, "reps": 8}
+      ]
+    },
+    {
+      "exercise_id": "ez_bar_curl",
+      "name": "Biceps sztangą łamaną — biceps",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "sets": [
+        {"value": 10, "reps": 10},
+        {"value": 10, "reps": 10},
+        {"value": 10, "reps": 10}
+      ]
+    },
+    {
+      "exercise_id": "french_press",
+      "name": "Wyciskanie francuskie — triceps",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "sets": [
+        {"value": 10, "reps": 10},
+        {"value": 10, "reps": 10},
+        {"value": 10, "reps": 10}
+      ]
+    },
+    {
+      "exercise_id": "seated_leg_curl",
+      "name": "Maszyna siedząc na dwójki — nogi",
+      "unit": "kg",
+      "rest_seconds": 60,
+      "sets": [
+        {"value": 20, "reps": 10},
+        {"value": 25, "reps": 10},
+        {"value": 25, "reps": 10}
+      ]
+    }
+  ],
+  "revision": "c3f4a5b6c7d89012c3f4a5b6c7d89012",
+  "created_at": "2026-10-03T12:00:00Z",
+  "updated_at": "2026-10-03T12:00:00Z"
+}
